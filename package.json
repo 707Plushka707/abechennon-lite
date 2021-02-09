@@ -1,0 +1,23 @@
+{
+    "name": "trader-bot-1",
+    "version": "1.0.0",
+    "description": ".",
+    "main": "index.js",
+    "scripts": {
+        "start": "node server/server.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "async": "^3.2.0",
+        "axios": "^0.20.0",
+        "body-parser": "^1.19.0",
+        "decimal.js": "^10.2.0",
+        "express": "^4.17.1",
+        "mongoose": "^5.10.0",
+        "node-binance-api": "^0.11.11",
+        "tulind": "^0.8.18",
+        "util": "^0.12.3"
+    }
+}
