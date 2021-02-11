@@ -1,7 +1,8 @@
 const Binance = require('node-binance-api');
 // require('../exchange');
+const backT = require('../backTesting');
 
-async function data() {
+async function getData() {
     let arrayClose = [];
     let arrayCloseActual = [];
     let period = 14;
@@ -33,14 +34,14 @@ async function data() {
             start_index = idx - 14;
             upto_index = idx;
             const arrayClosePeriod = arrayClose.slice(start_index, upto_index); //generamos el array arrayClosePeriod con 14 elem, para cada iteracion
-            console.log('Indice arrayClose: ' + idx);
+            // console.log('Indice arrayClose: ' + idx);
             // console.log('arrayClosePeriod: ' + arrayClosePeriod);
             // rsi(arrayClosePeriod, period);
             // let calculateRsi = rsi(arrayClosePeriod, period);
             // console.log(`RSI ${calculateRsi}`);
             // strategy1(arrayClosePeriod, period);
             backTesting(arrayClosePeriod, period);
-            console.log('***************************************');
+            // console.log('***************************************');
         });
     });
     //==========================================================================
@@ -144,26 +145,51 @@ const strategy1 = (array, period) => {
 let buy = 0;
 let sell = 0;
 let profit = 0;
+let valueBuy = [];
+let valueSell = [];
 
 const backTesting = (array, period) => {
+    let quantity = 0.00043060; //Equivale u$d20 al 09/02/2021
     let calculateRsi = rsi(array, period);
 
-    console.log(`BackTesting RSI: ${calculateRsi}`);
-
     if (calculateRsi < 20) {
-        buy = buy + 1;
+        console.log(`BackTesting RSI: ${calculateRsi}`);
+        console.log(array);
+        buy = buy + 1; //Contador buy
+        valueBuy.push(array[period - 1]);
+        console.log(`ValueBuy: ${valueBuy}`);
+
+        // promedioValueBuy = (precioCompra2 + precioCompra1) / buy;
+        // console.log(`promedioValueBuy: ${promedioValueBuy}`);
+        console.log(`Buy ${buy}`);
+        console.log(`Sell ${sell}`);
+        console.log('***************************************');
     }
     if (calculateRsi > 80) {
-        sell = sell + 1;
+        console.log(`BackTesting RSI: ${calculateRsi}`);
+        console.log(array);
+        sell = sell + 1; //Contador sell
+        valueSell.push(array[period - 1]);
+        console.log(`ValueSell: ${valueSell}`);
+
+        // valueSell = array[period - 1];
+        // profit = profit + (valueSell - valueBuy);
+        console.log(`Precio venta: ${valueSell} Y Precio de compra: ${valueBuy}`);
+        console.log(`Profit: ${profit}`)
+        console.log(`Buy ${buy}`);
+        console.log(`Sell ${sell}`);
+        console.log('***************************************');
     }
-    console.log(`Buy ${buy}`);
-    console.log(`Sell ${sell}`);
+
+
+    // console.log(`Buy ${buy}`);
+    // console.log(`Sell ${sell}`);
 };
 
 
-data();
+getData();
 
-module.exports = data;
+module.exports = getData;
 
 // 'use strict'
 
