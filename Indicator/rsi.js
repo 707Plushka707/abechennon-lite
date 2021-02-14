@@ -40,7 +40,7 @@ async function getData() {
             // let calculateRsi = rsi(arrayClosePeriod, period);
             // console.log(`RSI ${calculateRsi}`);
             // strategy1(arrayClosePeriod, period);
-            backTesting(arrayClosePeriod, period);
+            backTesting(idx, arrayClosePeriod, period);
             // console.log('***************************************');
         });
     });
@@ -64,7 +64,7 @@ async function getData() {
             arrayCloseActual.push(close);
             // console.log(arrayCloseActual);
             // strategy1(arrayCloseActual, period);
-            backTesting(arrayCloseActual, period);
+            // backTesting(arrayCloseActual, period);
             console.log('***************************************');
         };
     });
@@ -142,22 +142,33 @@ const strategy1 = (array, period) => {
         console.log('RSI dentro de rango');
 };
 
+let valueBuy = [];
+let valueSell = [];
+let valueBuyObject = {};
+let valueSellObject = {};
+
 let buy = 0;
 let sell = 0;
 let profit = 0;
-let valueBuy = [];
-let valueSell = [];
+let valueOperation = new Object();
+let oneInstSell = false;
+let oneInstBuy = false;
 
-const backTesting = (array, period) => {
+const backTesting = (idx, array, period) => {
     let quantity = 0.00043060; //Equivale u$d20 al 09/02/2021
     let calculateRsi = rsi(array, period);
 
-    if (calculateRsi < 20) {
+    if (calculateRsi <= 20 && oneInstBuy == false) {
         console.log(`BackTesting RSI: ${calculateRsi}`);
-        console.log(array);
+        oneInstBuy = true;
+        oneInstSell = false;
         buy = buy + 1; //Contador buy
-        valueBuy.push(array[period - 1]);
-        console.log(`ValueBuy: ${valueBuy}`);
+        valueOperation['Buy_' + idx] = array[period - 1];
+        // profit = console.log(valueOperation);
+        console.log(valueOperation);
+        // valueOperation.push(objeto['auto' + i]);
+        // valueBuy.push(array[period - 1]);
+        // console.log(`ValueBuy: ${valueBuy}`);
 
         // promedioValueBuy = (precioCompra2 + precioCompra1) / buy;
         // console.log(`promedioValueBuy: ${promedioValueBuy}`);
@@ -165,17 +176,14 @@ const backTesting = (array, period) => {
         console.log(`Sell ${sell}`);
         console.log('***************************************');
     }
-    if (calculateRsi > 80) {
+    if (calculateRsi >= 80 && oneInstSell == false) {
         console.log(`BackTesting RSI: ${calculateRsi}`);
-        console.log(array);
+        oneInstSell = true;
+        oneInstBuy = false;
         sell = sell + 1; //Contador sell
-        valueSell.push(array[period - 1]);
-        console.log(`ValueSell: ${valueSell}`);
+        valueOperation['Sell_' + idx] = array[period - 1];
 
-        // valueSell = array[period - 1];
-        // profit = profit + (valueSell - valueBuy);
-        console.log(`Precio venta: ${valueSell} Y Precio de compra: ${valueBuy}`);
-        console.log(`Profit: ${profit}`)
+        console.log(valueOperation);
         console.log(`Buy ${buy}`);
         console.log(`Sell ${sell}`);
         console.log('***************************************');
@@ -185,7 +193,6 @@ const backTesting = (array, period) => {
     // console.log(`Buy ${buy}`);
     // console.log(`Sell ${sell}`);
 };
-
 
 getData();
 
