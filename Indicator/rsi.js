@@ -208,7 +208,7 @@ const backTesting = (idx, array, period) => {
 
     };
     return profit;
-};
+}
 
 getData();
 
