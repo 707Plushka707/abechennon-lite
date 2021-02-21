@@ -1,3 +1,4 @@
+const { nextTick } = require('async');
 const Binance = require('node-binance-api');
 // require('../exchange');
 const backT = require('../backTesting');
@@ -40,7 +41,7 @@ async function getData() {
             // let calculateRsi = rsi(arrayClosePeriod, period);
             // console.log(`RSI ${calculateRsi}`);
             // strategy1(arrayClosePeriod, period);
-            backTesting(idx, arrayClosePeriod, period);
+            console.log('Profit: ' + backTesting(idx, arrayClosePeriod, period));
             // console.log('***************************************');
         });
     });
@@ -142,56 +143,71 @@ const strategy1 = (array, period) => {
         console.log('RSI dentro de rango');
 };
 
-let valueBuy = [];
-let valueSell = [];
-let valueBuyObject = {};
-let valueSellObject = {};
-
 let buy = 0;
 let sell = 0;
 let profit = 0;
-let valueOperation = new Object();
-let oneInstSell = false;
-let oneInstBuy = false;
+let flagSell = false;
+let flagBuy = false;
+let objectOperation = new Object();
 
 const backTesting = (idx, array, period) => {
     let quantity = 0.00043060; //Equivale u$d20 al 09/02/2021
     let calculateRsi = rsi(array, period);
 
-    if (calculateRsi <= 20 && oneInstBuy == false) {
-        console.log(`BackTesting RSI: ${calculateRsi}`);
-        oneInstBuy = true;
-        oneInstSell = false;
+    if (calculateRsi <= 22 && flagBuy == false) {
+        flagBuy = true;
+        flagSell = false;
         buy = buy + 1; //Contador buy
-        valueOperation['Buy_' + idx] = array[period - 1];
-        // profit = console.log(valueOperation);
-        console.log(valueOperation);
-        // valueOperation.push(objeto['auto' + i]);
-        // valueBuy.push(array[period - 1]);
-        // console.log(`ValueBuy: ${valueBuy}`);
+        objectOperation['Buy_' + idx] = array[period - 1];
+        // console.log(`Buy ${buy}`);
+        // console.log(`Sell ${sell}`);
+        let arrayOperation = Object.entries(objectOperation);
 
-        // promedioValueBuy = (precioCompra2 + precioCompra1) / buy;
-        // console.log(`promedioValueBuy: ${promedioValueBuy}`);
-        console.log(`Buy ${buy}`);
-        console.log(`Sell ${sell}`);
-        console.log('***************************************');
-    }
-    if (calculateRsi >= 80 && oneInstSell == false) {
-        console.log(`BackTesting RSI: ${calculateRsi}`);
-        oneInstSell = true;
-        oneInstBuy = false;
+        arrayOperation.forEach((operation, i, arrayOperation) => {
+            const prevPrice = () => {
+                if (arrayOperation[i - 1] === undefined) {
+                    return 0;
+                } else {
+                    return arrayOperation[i - 1][1]
+                };
+            };
+
+            if (arrayOperation[i][0].includes('Buy') && prevPrice() != 0) {
+                profit = profit + (prevPrice() - arrayOperation[i][1]);
+            } else {
+                profit = profit;
+            };
+        });
+
+    };
+
+    if (calculateRsi >= 78 && flagSell == false) {
+        flagSell = true;
+        flagBuy = false;
         sell = sell + 1; //Contador sell
-        valueOperation['Sell_' + idx] = array[period - 1];
+        objectOperation['Sell_' + idx] = array[period - 1];
+        // console.log(`Buy ${buy}`);
+        // console.log(`Sell ${sell}`);
+        let arrayOperation = Object.entries(objectOperation);
 
-        console.log(valueOperation);
-        console.log(`Buy ${buy}`);
-        console.log(`Sell ${sell}`);
-        console.log('***************************************');
-    }
+        arrayOperation.forEach((operation, i, arrayOperation) => {
+            const prevPrice = () => {
+                if (arrayOperation[i - 1] === undefined) {
+                    return 0;
+                } else {
+                    return arrayOperation[i - 1][1]
+                };
+            };
 
+            if (arrayOperation[i][0].includes('Sell') && prevPrice() != 0) {
+                profit = profit + (arrayOperation[i][1] - prevPrice());
+            } else {
+                profit = profit;
+            };
+        });
 
-    // console.log(`Buy ${buy}`);
-    // console.log(`Sell ${sell}`);
+    };
+    return profit;
 };
 
 getData();
