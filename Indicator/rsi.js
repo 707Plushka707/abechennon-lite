@@ -31,6 +31,8 @@ async function getData() {
         //==========================================================================
         //=================== Obtenemos 500 array de 14 periodos ===================
         //==========================================================================
+        let profitBackTesting;
+
         arrayClose.forEach((val, idx, arrayClose) => { //iteracion en el array arrayClose           
             start_index = idx - 14;
             upto_index = idx;
@@ -41,9 +43,12 @@ async function getData() {
             // let calculateRsi = rsi(arrayClosePeriod, period);
             // console.log(`RSI ${calculateRsi}`);
             // strategy1(arrayClosePeriod, period);
-            console.log('Profit: ' + backTesting(idx, arrayClosePeriod, period));
             // console.log('***************************************');
+            profitBackTesting = backTesting(idx, arrayClosePeriod, period);
         });
+        console.log('Profit Back Testing: ' + profitBackTesting);
+        console.log(`Buy ${buy}`);
+        console.log(`Sell ${sell}`);
     });
     //==========================================================================
     //=================== Los 14 ultimos close ===================
@@ -146,12 +151,20 @@ const strategy1 = (array, period) => {
 let buy = 0;
 let sell = 0;
 let profit = 0;
+let profitParcial = 0;
 let flagSell = false;
 let flagBuy = false;
 let objectOperation = new Object();
 
+// const prevPrice = (i, arrayOperation) => {
+//     if (arrayOperation[i - 1] === undefined) {
+//         return 0;
+//     } else {
+//         return arrayOperation[i - 1][1]
+//     };
+// };
+
 const backTesting = (idx, array, period) => {
-    let quantity = 0.00043060; //Equivale u$d20 al 09/02/2021
     let calculateRsi = rsi(array, period);
 
     if (calculateRsi <= 22 && flagBuy == false) {
@@ -159,8 +172,6 @@ const backTesting = (idx, array, period) => {
         flagSell = false;
         buy = buy + 1; //Contador buy
         objectOperation['Buy_' + idx] = array[period - 1];
-        // console.log(`Buy ${buy}`);
-        // console.log(`Sell ${sell}`);
         let arrayOperation = Object.entries(objectOperation);
 
         arrayOperation.forEach((operation, i, arrayOperation) => {
@@ -173,12 +184,18 @@ const backTesting = (idx, array, period) => {
             };
 
             if (arrayOperation[i][0].includes('Buy') && prevPrice() != 0) {
-                profit = profit + (prevPrice() - arrayOperation[i][1]);
+                profitParcial = prevPrice() - arrayOperation[i][1];
+                profit = profit + profitParcial;
+                console.log(`Indice: ${i}`);
+                console.log(arrayOperation);
+                // console.log("Operacion Buy: " + profit + " + " + prevPrice() + " - " + arrayOperation[i][1]);
+                console.log(`Profit parcial: ${profitParcial}`);
+                console.log(`Profit: ${profit}`);
+                console.log('----------------------------------------------------------');
             } else {
                 profit = profit;
             };
         });
-
     };
 
     if (calculateRsi >= 78 && flagSell == false) {
@@ -186,8 +203,6 @@ const backTesting = (idx, array, period) => {
         flagBuy = false;
         sell = sell + 1; //Contador sell
         objectOperation['Sell_' + idx] = array[period - 1];
-        // console.log(`Buy ${buy}`);
-        // console.log(`Sell ${sell}`);
         let arrayOperation = Object.entries(objectOperation);
 
         arrayOperation.forEach((operation, i, arrayOperation) => {
@@ -200,15 +215,22 @@ const backTesting = (idx, array, period) => {
             };
 
             if (arrayOperation[i][0].includes('Sell') && prevPrice() != 0) {
-                profit = profit + (arrayOperation[i][1] - prevPrice());
+                profitParcial = arrayOperation[i][1] - prevPrice();
+                profit = profit + profitParcial;
+                console.log(`Indice: ${i}`);
+                console.log(arrayOperation);
+                // console.log("Operacion Sell: " + profit + " + " + arrayOperation[i][1] + " - " + prevPrice());
+                console.log(`Profit parcial: ${profitParcial}`);
+                console.log(`Profit: ${profit}`);
+                console.log('----------------------------------------------------------');
             } else {
                 profit = profit;
             };
-        });
 
+        });
     };
     return profit;
-}
+};
 
 getData();
 
