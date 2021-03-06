@@ -1,55 +1,36 @@
-const { nextTick } = require('async');
 const Binance = require('node-binance-api');
-// require('../exchange');
-const backT = require('../backTesting');
 
-async function getData() {
+const getData = async() => {
     let arrayClose = [];
     let arrayCloseActual = [];
     let period = 14;
 
-    await require('../exchange'); //Doble llamada
-    //==========================================================================
-    //============================ Conexion Binance ============================
-    //==========================================================================
-    //Hacer que lea la conexion desde el archivo exchange!! 
+    require('../exchange'); //Doble llamada
 
-    // const binance = await Binance().options({
-    const binance = await new Binance().options({
+    //============================ Conexion Binance ============================
+    const binance = await new Binance().options({ //Hacer que lea la conexion desde el archivo exchange!! 
         APIKEY: 'g43IhfkuGEnQzp1mstGMBrrnrTB0WkOHOZ6eLy0bNBaGTqE1OOJOCl7HBNJ1CIoJ',
         APISECRET: 'WYRseAeFwqwJTyo1P8ughTDnhqswCSfv8vdLInuDKmbPhX7brVmAXsk8sibOyjhW'
     });
     console.log('Conexion Binance OK! - rsi');
 
-    //==========================================================================
     //=================== Historico: los 500 ultimos close =====================
-    //==========================================================================
     await binance.candlesticks("BTCUSDT", "15m", (error, ticks, symbol) => { //indice 0 mas viejo, indice 500 ultima
         ticks.forEach((val, i) => {
             arrayClose.push(ticks[i][4]); //en indice 4 esta el close
         });
-        //==========================================================================
-        //=================== Obtenemos 500 array de 14 periodos ===================
-        //==========================================================================
-        let profitBackTesting;
 
-        arrayClose.forEach((val, idx, arrayClose) => { //iteracion en el array arrayClose           
-            start_index = idx - 14;
+        //=================== Obtenemos 500 array de 14 periodos ===================
+        for (let idx = 0; idx <= arrayClose.length; idx++) {
+            start_index = idx - period;
             upto_index = idx;
             const arrayClosePeriod = arrayClose.slice(start_index, upto_index); //generamos el array arrayClosePeriod con 14 elem, para cada iteracion
-            // console.log('Indice arrayClose: ' + idx);
-            // console.log('arrayClosePeriod: ' + arrayClosePeriod);
-            // rsi(arrayClosePeriod, period);
-            // let calculateRsi = rsi(arrayClosePeriod, period);
-            // console.log(`RSI ${calculateRsi}`);
-            // strategy1(arrayClosePeriod, period);
-            // console.log('***************************************');
-            profitBackTesting = backTesting(idx, arrayClosePeriod, period);
-        });
-        console.log('Profit Back Testing: ' + profitBackTesting);
-        console.log(`Buy ${buy}`);
-        console.log(`Sell ${sell}`);
+
+            objectOperation = dataBackTesting(idx, arrayClosePeriod, period); //Generando el objeto con los datos de las operaciones de compra/venta que sera usado por el backTesting
+        };
+        backTesting(objectOperation);
     });
+
     //==========================================================================
     //=================== Los 14 ultimos close ===================
     //==========================================================================
@@ -76,9 +57,73 @@ async function getData() {
     });
 };
 
-//==========================================================================
+//=================== Back-Testing ===================
+let buy = 0;
+let sell = 0;
+let profit = 0;
+let profitParcial = 0;
+let flagSell = false;
+let flagBuy = false;
+let objectOperation = new Object();
+
+const dataBackTesting = (idx, arrayClosePeriod, period) => { //Funcion para armar el objectOperation(objeto con las operaciones de compra/venta), que sera usado en el backTesting
+    let calculateRsi = rsi(arrayClosePeriod, period);
+    if (calculateRsi <= 22 && flagBuy == false) {
+        flagBuy = true;
+        flagSell = false;
+        buy = buy + 1; //Contador buy
+        objectOperation['Buy_' + idx] = arrayClosePeriod[period - 1];
+    } else if (calculateRsi >= 78 && flagSell == false) {
+        flagSell = true;
+        flagBuy = false;
+        sell = sell + 1; //Contador sell
+        objectOperation['Sell_' + idx] = arrayClosePeriod[period - 1];
+    } else {};
+
+    return objectOperation;
+};
+
+const backTesting = (objectOperation) => {
+    let arrayOperation = Object.entries(objectOperation);
+    console.log(arrayOperation);
+    console.log(`Buy ${buy}`);
+    console.log(`Sell ${sell}`);
+
+    const prevPrice = (ix, arrayOperation) => {
+        if (arrayOperation[ix - 1] === undefined) {
+            return 0;
+        } else {
+            return arrayOperation[ix - 1][1]
+        };
+    };
+
+    arrayOperation.forEach((operation, ix, arrayOperation) => {
+        if (operation[0].includes('Buy') && prevPrice(ix, arrayOperation) != 0) {
+            profitParcial = prevPrice(ix, arrayOperation) - arrayOperation[ix][1];
+            profit = profit + profitParcial;
+            console.log("---------------------------------------");
+            console.log(`ix: ${ix}`);
+            console.log("Buy (Iniciando long/cerrando short): " + arrayOperation[ix][0]);
+            console.log(`Profit parcial: ${profitParcial}`);
+            console.log(`Profit: ${profit}`);
+        } else if (operation[0].includes('Sell') && prevPrice(ix, arrayOperation) != 0) {
+            profitParcial = arrayOperation[ix][1] - prevPrice(ix, arrayOperation);
+            profit = profit + profitParcial;
+            console.log("---------------------------------------");
+            console.log(`ix: ${ix}`);
+            console.log("Sell (Iniciando short/cerrando long): " + arrayOperation[ix][0]);
+            console.log(`Profit parcial: ${profitParcial}`);
+            console.log(`Profit: ${profit}`);
+        } else {
+            console.log("---------------------------------------");
+            console.log(`ix: ${ix}`);
+            console.log(`Profit parcial: ${profitParcial}`);
+            console.log(`Profit: ${profit}`);
+        };
+    });
+};
+
 //=================== Calcular RSI ===================
-//==========================================================================
 // rsi= 100 - 100 / (1 + rs)
 // rs = Average Gain / Average Loss
 
@@ -148,261 +193,6 @@ const strategy1 = (array, period) => {
         console.log('RSI dentro de rango');
 };
 
-let buy = 0;
-let sell = 0;
-let profit = 0;
-let profitParcial = 0;
-let flagSell = false;
-let flagBuy = false;
-let objectOperation = new Object();
-
-// const prevPrice = (i, arrayOperation) => {
-//     if (arrayOperation[i - 1] === undefined) {
-//         return 0;
-//     } else {
-//         return arrayOperation[i - 1][1]
-//     };
-// };
-
-const backTesting = (idx, array, period) => {
-    let calculateRsi = rsi(array, period);
-
-    if (calculateRsi <= 22 && flagBuy == false) {
-        flagBuy = true;
-        flagSell = false;
-        buy = buy + 1; //Contador buy
-        objectOperation['Buy_' + idx] = array[period - 1];
-        let arrayOperation = Object.entries(objectOperation);
-
-        arrayOperation.forEach((operation, i, arrayOperation) => {
-            const prevPrice = () => {
-                if (arrayOperation[i - 1] === undefined) {
-                    return 0;
-                } else {
-                    return arrayOperation[i - 1][1]
-                };
-            };
-
-            if (arrayOperation[i][0].includes('Buy') && prevPrice() != 0) {
-                profitParcial = prevPrice() - arrayOperation[i][1];
-                profit = profit + profitParcial;
-                console.log(`Indice: ${i}`);
-                console.log(arrayOperation);
-                // console.log("Operacion Buy: " + profit + " + " + prevPrice() + " - " + arrayOperation[i][1]);
-                console.log(`Profit parcial: ${profitParcial}`);
-                console.log(`Profit: ${profit}`);
-                console.log('----------------------------------------------------------');
-            } else {
-                profit = profit;
-            };
-        });
-    };
-
-    if (calculateRsi >= 78 && flagSell == false) {
-        flagSell = true;
-        flagBuy = false;
-        sell = sell + 1; //Contador sell
-        objectOperation['Sell_' + idx] = array[period - 1];
-        let arrayOperation = Object.entries(objectOperation);
-
-        arrayOperation.forEach((operation, i, arrayOperation) => {
-            const prevPrice = () => {
-                if (arrayOperation[i - 1] === undefined) {
-                    return 0;
-                } else {
-                    return arrayOperation[i - 1][1]
-                };
-            };
-
-            if (arrayOperation[i][0].includes('Sell') && prevPrice() != 0) {
-                profitParcial = arrayOperation[i][1] - prevPrice();
-                profit = profit + profitParcial;
-                console.log(`Indice: ${i}`);
-                console.log(arrayOperation);
-                // console.log("Operacion Sell: " + profit + " + " + arrayOperation[i][1] + " - " + prevPrice());
-                console.log(`Profit parcial: ${profitParcial}`);
-                console.log(`Profit: ${profit}`);
-                console.log('----------------------------------------------------------');
-            } else {
-                profit = profit;
-            };
-
-        });
-    };
-    return profit;
-};
-
 getData();
 
 module.exports = getData;
-
-// 'use strict'
-
-// const async = require('async');
-// const Decimal = require('decimal.js');
-
-// class RSI {
-//     constructor(values, period) {
-//         this.values = values.reverse();
-//         this.data = [];
-//         this.period = period;
-//     }
-//     calculate(callback) {
-//         async.series([
-//                 (next) => this.lossOrGain(next),
-//                 (next) => this.averageGain(next),
-//                 (next) => this.averageLoss(next),
-//                 (next) => this.calculateRS(next),
-//                 (next) => this.calculateRSI(next)
-//             ],
-//             (err, results) => {
-//                 if (err) {
-//                     return callback(err);
-//                 }
-//                 callback(null, results[4]);
-//             });
-//     }
-//     lossOrGain(callback) {
-//         this.values.forEach((val, idx) => {
-//             if (idx > 0) {
-//                 const prevVal = this.values[idx - 1];
-//                 const change = Decimal.sub(val, prevVal);
-//                 this.data.push({
-//                     value: val,
-//                     change: change.toNumber(),
-//                     gain: (change.toNumber() > 0) ? change.toNumber() : 0,
-//                     loss: (change.toNumber() < 0) ? change.abs().toNumber() : 0
-//                 });
-//             } else {
-//                 this.data.push({
-//                     value: val,
-//                     gain: 0,
-//                     loss: 0,
-//                     change: 0
-//                 })
-//             }
-//         });
-//         callback(null, this.data);
-//     }
-//     averageGain(callback) {
-//         this.getAverages('gain', callback)
-//     }
-//     averageLoss(callback) {
-//         this.getAverages('loss', callback)
-//     }
-//     getAverages(key, callback) {
-//         let sum = new Decimal(0);
-//         let avg = 0;
-//         let overallAvg = 0;
-//         const upperCaseKey = key.charAt(0).toUpperCase() + key.substr(1);
-//         this.data.forEach((val, idx) => {
-//             if (idx < this.period) {
-//                 sum = sum.plus(val[key]);
-//             } else if (idx === this.period) {
-//                 sum = sum.plus(val[key]);
-//                 avg = sum.dividedBy(this.period);
-//                 this.data[idx][`avg${upperCaseKey}`] =
-//                     avg.toNumber();
-//             } else {
-//                 overallAvg =
-//                     Decimal.mul(this.data[idx - 1][`avg${upperCaseKey}`], (this.period - 1))
-//                     .plus(val[key])
-//                     .dividedBy(this.period);
-//                 this.data[idx][`avg${upperCaseKey}`] =
-//                     overallAvg.toNumber();
-//             }
-//         });
-//         callback(null, this.data);
-//     }
-//     calculateRS(callback) {
-//         let rs = 0;
-//         this.data.forEach((val, idx) => {
-//             if (val.avgGain !== undefined && val.avgLoss !== undefined &&
-//                 !isNaN(parseFloat(val.avgGain)) && !isNaN(parseFloat(val.avgLoss))) {
-//                 val.rs = Decimal.div(val.avgGain, val.avgLoss).toNumber();
-//             }
-//         });
-//         callback(null, this.data);
-//     }
-//     calculateRSI(callback) {
-//         let rs = 0;
-//         this.data.forEach((val, idx) => {
-//             if (val.avgLoss) {
-//                 this.data[idx].rsi = Decimal.sub(100, Decimal.div(100, Decimal.add(1, val.rs))).toNumber();
-//             } else if (val.rs != undefined) {
-//                 this.data[idx].rsi = 100;
-//             }
-//         });
-//         return callback(null, this.data);
-//     }
-// }
-// module.exports = RSI;
-
-//*********************************************************************************************************************************/
-//*********************************************************************************************************************************/
-
-// const binance = require('node-binance-api')
-
-// ().options({
-//     APIKEY: 'xxx',
-//     APISECRET: 'xxx',
-//     useServerTime: true,
-//     test: true // True = SandboxMode 
-// });
-// /* VARIABLES */
-// let listClose = [];
-// let changeUp = 0;
-// let changeDown = 0;
-// let last_closeHigh = 0;
-// let last_closeLow = 0;
-// let current_time = Date.now();
-// let period = 20;
-
-// function calculateRSI() {
-
-//     console.log("Generating RSI");
-
-//     binance.candlesticks("ETHBTC", "1d", (error, ticks, symbol) => {
-
-//         for (i = 0; i < ticks.length; i++) {
-
-//             let last_tick = ticks[i];
-//             let [time, open, high, low, close, volume, closeTime, assetVolume, trades, buyBaseVolume, buyAssetVolume, ignored] = last_tick;
-
-//             listClose.push(close);
-
-//             if (i == ticks.length - 1) {
-//                 for (x = 0; x < ticks.length; x++) {
-//                     previous_close = (parseFloat(listClose[x - 1]));
-//                     current_close = (parseFloat(listClose[x])); // HIGH if (current_close > previous_close) 
-//                     {
-//                         upChange = current_close - previous_close;
-//                         changeUp += upChange;
-//                         if (x == ticks.length - 1) {
-//                             last_closeHigh = current_close - previous_close;
-//                         }
-//                     }; // LOW if (previous_close > current_close) 
-//                     {
-//                         downChange = previous_close - current_close;
-//                         changeDown += downChange;
-//                         if (x == ticks.length - 1) {
-//                             last_closeLow = previous_close - current_close;
-//                         };
-//                     };
-//                     if (x == ticks.length - 1) {
-//                         AVGHigh = changeUp / period;
-//                         AVGLow = changeDown / period;
-//                         Upavg = (AVGHigh * (period - 1) + last_closeHigh) / (period);
-//                         Downavg = (AVGLow * (period - 1) + last_closeLow) / (period);
-//                         RS = Upavg / Downavg;
-//                         RSI = (100 - (100 / (1 + RS)));
-//                         console.log(RSI);
-//                         return RSI;
-//                     };
-//                 };
-//             };
-//         };
-//     }, { limit: period, endTime: current_time });
-// };
-
-// calculateRSI();
