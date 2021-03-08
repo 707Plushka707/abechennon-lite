@@ -1,4 +1,5 @@
 const rsi = require('./indicator/rsi');
+let strategy1 = require('./strategy');
 
 //=================== Back-Testing ===================
 let buy = 0;
@@ -8,8 +9,10 @@ let profitParcial = 0;
 let flagSell = false;
 let flagBuy = false;
 let objectOperation = new Object();
+let parcialPercent;
+let totalPercent = 0;
 
-const dataBackTesting = (idx, arrayClosePeriod, period) => { //Funcion para armar el objectOperation(objeto con las operaciones de compra/venta), que sera usado en el backTesting
+const dataBackTesting = (idx, arrayClosePeriod, period) => { //Funcion para armar el objectOperation(objeto con las operaciones de compra/venta), que sera usado por el backTesting
     let calculateRsi = rsi(arrayClosePeriod, period);
 
     if (calculateRsi <= 20 && flagBuy == false) {
@@ -45,24 +48,33 @@ const backTesting = (objectOperation) => {
         if (operation[0].includes('Buy') && prevPrice(ix, arrayOperation) != 0) {
             profitParcial = prevPrice(ix, arrayOperation) - arrayOperation[ix][1];
             profit = profit + profitParcial;
+            parcialPercent = 100 - ((arrayOperation[ix][1] / prevPrice(ix, arrayOperation)) * 100);
+            totalPercent = totalPercent + parcialPercent;
             console.log("---------------------------------------");
             console.log(`ix: ${ix}`);
             console.log("Buy (Iniciando long/cerrando short): " + arrayOperation[ix][0]);
             console.log(`Profit parcial: ${profitParcial}`);
-            console.log(`Profit: ${profit}`);
+            console.log(`Profit Total: ${profit}`);
+            console.log(`% Parcial: ${parcialPercent}`);
+            console.log(`% Total: ${totalPercent}`);
         } else if (operation[0].includes('Sell') && prevPrice(ix, arrayOperation) != 0) {
             profitParcial = arrayOperation[ix][1] - prevPrice(ix, arrayOperation);
             profit = profit + profitParcial;
+            parcialPercent = ((arrayOperation[ix][1] / prevPrice(ix, arrayOperation)) * 100) - 100;
+            totalPercent = totalPercent + parcialPercent;
             console.log("---------------------------------------");
             console.log(`ix: ${ix}`);
             console.log("Sell (Iniciando short/cerrando long): " + arrayOperation[ix][0]);
             console.log(`Profit parcial: ${profitParcial}`);
-            console.log(`Profit: ${profit}`);
+            console.log(`Profit Total: ${profit}`);
+            console.log(`% Parcial: ${parcialPercent}`);
+            console.log(`% Total: ${totalPercent}`);
         } else {
             console.log("---------------------------------------");
             console.log(`ix: ${ix}`);
             console.log(`Profit parcial: ${profitParcial}`);
-            console.log(`Profit: ${profit}`);
+            console.log(`Profit Total: ${profit}`);
+            console.log(`% Total: ${totalPercent}`);
         };
     });
 };

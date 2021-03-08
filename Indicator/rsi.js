@@ -51,6 +51,4 @@ const rsi = (arrayCloseActual, period) => {
     return rsi;
 };
 
-// getData();
-
 module.exports = rsi;

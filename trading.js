@@ -1,6 +1,7 @@
 const Binance = require('node-binance-api');
 // require('./exchange');
 let { dataBackTesting, backTesting } = require('./backTesting');
+let strategy1 = require('./strategy');
 // require('./indicator/rsi');
 
 const getData = async() => {
