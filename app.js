@@ -2,9 +2,10 @@ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 require('./config/config');
-require('./config/conexion');
-require('./exchange');
-require('./indicator/rsi');
+// require('./config/conexion');
+require('./trading');
+// require('./exchange');
+// require('./indicator/rsi');
 
 const app = express();
 
