@@ -1,6 +1,6 @@
 const Binance = require('node-binance-api');
 // require('./exchange');
-let { dataBackTesting, backTesting } = require('./backTesting');
+let { dataBackTesting, backTesting, dataTrackerRsi } = require('./backTesting');
 let strategy1 = require('./strategy');
 // require('./indicator/rsi');
 
@@ -8,6 +8,7 @@ const getData = async() => {
     let arrayClose = [];
     let arrayCloseActual = [];
     let period = 14;
+    let totalClosePeriod = [];
 
     // require('../exchange'); //Doble llamada
 
@@ -29,10 +30,15 @@ const getData = async() => {
             start_index = idx - period;
             upto_index = idx;
             const arrayClosePeriod = arrayClose.slice(start_index, upto_index); //generamos el array arrayClosePeriod con 14 elem, para cada iteracion
+            totalClosePeriod.push(arrayClosePeriod); // se genera un array con la coleccion de cada arrayClosePeriod
 
-            objectOperation = dataBackTesting(idx, arrayClosePeriod, period); //Generando el objeto con los datos de las operaciones de compra/venta que sera usado por el backTesting
+            // objectOperation = dataBackTesting(idx, arrayClosePeriod, period); //Generando el objeto con los datos de las operaciones de compra/venta que sera usado por el backTesting
         };
-        backTesting(objectOperation);
+        // console.log(totalClosePeriod);
+        let arrayTrackerRsi = dataTrackerRsi(totalClosePeriod, period);
+
+        // backTesting(objectOperation);
+        // backTesting(arrayTrackerRsi);
     });
 
     //==========================================================================
