@@ -13,35 +13,33 @@ let parcialPercent;
 let totalPercent = 0;
 let arrayTrackerRsi = [];
 
-const dataTrackerRsi = (totalClosePeriod, period) => {
-    // let calculateRsi = rsi(totalClosePeriod, period);
 
-    // console.log(totalClosePeriod);
+const dataTrackerRsi = (totalClosePeriod, period) => {
 
     totalClosePeriod.forEach((currentValue, idx, totalClosePeriod) => {
-        console.log(rsi(totalClosePeriod[idx], period))
-        console.log(rsi(totalClosePeriod[idx - 1], period))
-        console.log(rsi(totalClosePeriod[idx--], period))
-        console.log(idx)
-            // console.log(currentValue)
-            // console.log(totalClosePeriod[idx])
+        let calculateRsi = rsi(currentValue, period);
 
-
-        // let status = (rsi(totalClosePeriod[idx - 1], period) == undefined) ? 0 : rsi(totalClosePeriod[idx - 1], period);
-
-        // console.log((rsi(totalClosePeriod[idx - 1], period) == undefined) ? 0 : rsi(totalClosePeriod[idx - 1], period));
-
-        // console.log(status)
-
-
-
-        // if (rsi(totalClosePeriod[idx], period)) {
-        //     console.log("venta")
-        // } else { console.log("nada") };
-
+        if (calculateRsi !== undefined) {
+            arrayTrackerRsi.push(calculateRsi);
+        } else {
+            arrayTrackerRsi.push(0);
+        };
     });
 
-
+    arrayTrackerRsi.forEach((currentValue, idx, arrayTrackerRsi) => {
+        if (arrayTrackerRsi[idx] > arrayTrackerRsi[idx - 1] && arrayTrackerRsi[idx - 2] > arrayTrackerRsi[idx - 3]) {
+            flagBuy = true;
+            flagSell = false;
+            buy = buy + 1; //Contador buy
+            objectOperation['Buy_' + idx] = arrayTrackerRsi[idx];
+        } else if (arrayTrackerRsi[idx] < arrayTrackerRsi[idx - 1] && arrayTrackerRsi[idx - 2] < arrayTrackerRsi[idx - 3]) {
+            flagSell = true;
+            flagBuy = false;
+            sell = sell + 1; //Contador sell
+            objectOperation['Sell_' + idx] = arrayTrackerRsi[idx];
+        } else {};
+    });
+    // console.log(objectOperation)
     return objectOperation;
 };
 

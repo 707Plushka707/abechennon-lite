@@ -11,6 +11,8 @@ Ruta de trabajo:
 * Proteger rutas, y la key
 * Instalar/configurar mongo
 * Agregar profit factor
+* Agregar % bateo al backtesting
+* Agregar lending de margin en el backtesting
 * Agregar EMA (4, 9, 18)-(50, 200), ADX, Macd
 * Evaluar agregar DMI y OVB
 * Agregar lineas de tendencias, soportes/resistencia, divergencias macd/rsi, MM(maximo mayor), mm(maximo menor), (minimo mayor), (minimo menor), ath

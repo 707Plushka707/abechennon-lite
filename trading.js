@@ -1,13 +1,15 @@
 const Binance = require('node-binance-api');
 // require('./exchange');
-let { dataBackTesting, backTesting, dataTrackerRsi } = require('./backTesting');
-let strategy1 = require('./strategy');
-// require('./indicator/rsi');
+const { dataBackTesting, backTesting, dataTrackerRsi } = require('./backTesting');
+const strategy1 = require('./strategy');
+const rsi = require('./indicator/rsi');
+const ema = require('./indicator/ema');
 
 const getData = async() => {
     let arrayClose = [];
     let arrayCloseActual = [];
     let period = 14;
+    let arrayClosePeriod = [];
     let totalClosePeriod = [];
 
     // require('../exchange'); //Doble llamada
@@ -24,27 +26,29 @@ const getData = async() => {
         ticks.forEach((val, i) => {
             arrayClose.push(ticks[i][4]); //en indice 4 esta el close
         });
+        // console.log(arrayClose)
 
         //=================== Obtenemos 500 array de 14 periodos ===================
-        for (let idx = 0; idx <= arrayClose.length; idx++) {
+
+        arrayClose.map((currentValue, idx, arrayClose) => {
             start_index = idx - period;
             upto_index = idx;
-            const arrayClosePeriod = arrayClose.slice(start_index, upto_index); //generamos el array arrayClosePeriod con 14 elem, para cada iteracion
+
+            if (start_index >= 0) {
+                arrayClosePeriod = arrayClose.slice(start_index, upto_index); //generamos el array arrayClosePeriod con 14 elem, para cada iteracion
+            };
             totalClosePeriod.push(arrayClosePeriod); // se genera un array con la coleccion de cada arrayClosePeriod
 
-            // objectOperation = dataBackTesting(idx, arrayClosePeriod, period); //Generando el objeto con los datos de las operaciones de compra/venta que sera usado por el backTesting
-        };
-        // console.log(totalClosePeriod);
-        let arrayTrackerRsi = dataTrackerRsi(totalClosePeriod, period);
+            // objectOperation = dataBackTesting(idx, arrayClosePeriod, period); //generando el objeto con los datos de las operaciones de compra/venta que sera usado por el backTesting
+        });
+        console.log(ema(totalClosePeriod, period));
 
-        // backTesting(objectOperation);
-        // backTesting(arrayTrackerRsi);
+        // objectOperation = dataTrackerRsi(totalClosePeriod, period);  //dataTrackerRsi
+        // backTesting(objectOperation); //recibo el objectOperation y lo procesa para calcular el backtesting
     });
 
-    //==========================================================================
+    //============================================================
     //=================== Los 14 ultimos close ===================
-    //==========================================================================
-
     await binance.candlesticks("BTCUSDT", "1m", (error, ticks, symbol) => {
         ticks.forEach((val, i) => {
             arrayCloseActual.push(ticks[i][4]); //en indice 4 esta el close
