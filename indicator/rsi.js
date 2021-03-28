@@ -97,7 +97,7 @@ const rsi = (arrayCloseActual, period) => {
                 return dif;
             };
         };
-        console.log(opDiferencia());
+        // console.log(opDiferencia());
 
         if (Math.sign(opDiferencia()) == 1) { //diferencias + y -
             difPositivas = difPositivas + opDiferencia(); //promediosDown si la diferencia es + la almacena aqui

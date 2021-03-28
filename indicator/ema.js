@@ -5,17 +5,19 @@ const sma = require('./sma');
 //sum := na(sum[1]) ? sma(src, length) : alpha * precioActual + (1 - alpha) * emaAnterior o sma
 const ema = (src, length) => {
     const alpha = 2 / (length + 1);
-    let res;
+    let res, prevEma;
     let flagSma = true;
-    let prevEma;
 
     src.map((curr, idx, src) => {
         if (curr.length == length && prevEma != undefined) { // 3er)prevEma existe y length son iguales
             res = alpha * parseFloat(curr) + (1 - alpha) * prevEma;
+            // console.log("prevEma " + prevEma)
+            // console.log("ema " + res)
             prevEma = res;
+            // console.log("=====================================")
         } else if (curr.length != length) { // 1er) array vacios
             // res = console.log('array incompleto o vacio');
-        } else if (curr.length == length && prevEma == undefined && flagSma == true) { // 2er) es el 1er array, pero no existe prevEma
+        } else if (curr.length == length && prevEma == undefined && flagSma == true) { // 2er) es el 1er array y no existe prevEma
             flagSma = false;
             res = alpha * parseFloat(curr) + (1 - alpha) * sma(curr, length);
             prevEma = res;
@@ -23,7 +25,10 @@ const ema = (src, length) => {
         // console.log(res);
         // return res;
     });
+
     return res;
 };
+
+// console.log("Ema: " + ema(arrayPrueba2, 14));
 
 module.exports = ema;
