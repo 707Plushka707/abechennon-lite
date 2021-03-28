@@ -70,11 +70,14 @@ const rs = (arrayGain, arrayLoss, length) => {
 //======================================================================================================
 
 //sum := na(sum[1]) ? sma(src, length) : alpha * src + (1 - alpha) * nz(sum[1])
+let flagRma = true;
+let prevRmaGain;
+let prevRmaLoss;
 const rsi = (src, length) => {
     let arrayGain = [];
     let arrayLoss = [];
-    let rmaGain, rmaLoss, prevRmaGain, prevRmaLoss;
-    let flagRma = true;
+    let rmaGain;
+    let rmaLoss;
     const alpha = 1 / length;
 
     console.log("========================================")
@@ -83,20 +86,34 @@ const rsi = (src, length) => {
         change(curr, idx, src) > 0 ? arrayGain.push(change(curr, idx, src)) : 0.0
         change(curr, idx, src) < 0 ? arrayLoss.push(change(curr, idx, src) * -1) : 0.0
     });
-    console.log(arrayGain)
-    console.log(arrayLoss)
+    // console.log(src[length - 1])
+    // console.log(arrayGain)
+    // console.log(arrayLoss)
 
-    if (arrayGain.length > 0 || arrayLoss.length > 0 && prevRma != undefined) { // 3er)prevEma existe y length son iguales
-        res = alpha * parseFloat(curr) + (1 - alpha) * prevRma;
-        prevRma = res;
-    } else if (arrayGain.length == 0 && arrayLoss.length == 0) { // 1er) array vacios
-        // console.log("Array vacios");
-    } else if (arrayGain.length > 0 || arrayLoss.length > 0 && prevRma == undefined && flagRma == true) { // 2er) es el 1er array y no existe prevEma
-        flagRma = false;
-        rmaGain = alpha * parseFloat(curr) + (1 - alpha) * sma(arrayGain, length);
-        rmaLoss = alpha * parseFloat(curr) + (1 - alpha) * sma(rmaLoss, length);
+    if (flagRma == false) { // 3er)prevEma existe y length son iguales
+        console.log("Paso 3..")
+        console.log("flag " + flagRma)
+        console.log("precio " + src[length - 1])
+        rmaGain = alpha * parseFloat(src[length - 1]) + (1 - alpha) * prevRmaGain;
+        rmaLoss = alpha * parseFloat(src[length - 1]) + (1 - alpha) * prevRmaLoss;
         prevRmaGain = rmaGain;
         prevRmaLoss = rmaLoss;
+        console.log("prevRmaGain " + prevRmaGain)
+        console.log("prevRmaLoss " + prevRmaLoss)
+    } else if (arrayGain.length == 0 && arrayLoss.length == 0) { // 1er) array vacios
+        console.log("Paso 1: Array vacios..");
+        console.log("flag " + flagRma)
+    } else if ((arrayGain.length > 0 || arrayLoss.length > 0) && flagRma == true) { // 2er) es el 1er array y no existe prevEma
+        flagRma = false;
+        console.log("Paso 2..")
+        console.log("flag " + flagRma)
+        console.log("precio " + src[length - 1])
+        rmaGain = alpha * parseFloat(src[length - 1]) + (1 - alpha) * sma(arrayGain, length);
+        rmaLoss = alpha * parseFloat(src[length - 1]) + (1 - alpha) * sma(arrayLoss, length);
+        prevRmaGain = rmaGain;
+        prevRmaLoss = rmaLoss;
+        console.log("prevRmaGain " + prevRmaGain)
+        console.log("prevRmaLoss " + prevRmaLoss)
     };
 
     let res = 100 - (100 / (1 + rmaGain / rmaLoss));
