@@ -2,13 +2,16 @@ const Binance = require('node-binance-api');
 // require('./exchange');
 const { dataBackTesting, backTesting, dataTrackerRsi } = require('./backTesting');
 const strategy1 = require('./strategy');
-const rsi = require('./indicator/rsi');
+// const rsi = require('./indicator/rsi');
+const sma = require('./indicator/sma');
 const ema = require('./indicator/ema');
+const rsi = require('./indicator/rsi');
+const rma = require('./indicator/rma');
 
 const getData = async() => {
     let arrayClose = [];
     let arrayCloseActual = [];
-    let period = 14;
+    let length = 14;
     let arrayClosePeriod = [];
     let totalClosePeriod = [];
 
@@ -30,18 +33,29 @@ const getData = async() => {
 
         //=================== Obtenemos 500 array de 14 periodos ===================
 
-        arrayClose.map((currentValue, idx, arrayClose) => {
-            start_index = idx - period;
-            upto_index = idx;
+        // console.log("Rma: " + rma(arrayClose, length));
+        console.log("Rsi: " + rsi(arrayClose, length));
 
-            if (start_index >= 0) {
-                arrayClosePeriod = arrayClose.slice(start_index, upto_index); //generamos el array arrayClosePeriod con 14 elem, para cada iteracion
-            };
-            totalClosePeriod.push(arrayClosePeriod); // se genera un array con la coleccion de cada arrayClosePeriod
+        // let flagRma = true;
+        // arrayClose.map((currentValue, idx, arrayClose) => {
+        //     start_index = idx - period;
+        //     upto_index = idx;
 
-            // objectOperation = dataBackTesting(idx, arrayClosePeriod, period); //generando el objeto con los datos de las operaciones de compra/venta que sera usado por el backTesting
-        });
-        console.log(ema(totalClosePeriod, period));
+        //     if (start_index >= 0) {
+        //         arrayClosePeriod = arrayClose.slice(start_index, upto_index); //generamos el array arrayClosePeriod con 14 elem, para cada iteracion
+        //     };
+        //     // totalClosePeriod.push(arrayClosePeriod); // se genera un array con la coleccion de cada arrayClosePeriod
+
+        //     // objectOperation = dataBackTesting(idx, arrayClosePeriod, period); //generando el objeto con los datos de las operaciones de compra/venta que sera usado por el backTesting
+        //     // console.log("Rsi: " + rsi(arrayClosePeriod, period));
+        //     // console.log("Rma: " + rma(arrayClosePeriod, period));
+        //     rma(arrayClosePeriod, period)
+        //         // console.log("Sma: " + sma(arrayClosePeriod, period));
+        //         // console.log("Ema: " + ema(totalClosePeriod, period));
+        //         // console.log("Rsi: " + rsi(totalClosePeriod, period));
+        // });
+        // console.log("Ema: " + ema(totalClosePeriod, period));
+        // console.log("Rsi: " + rsi(totalClosePeriod, period));
 
         // objectOperation = dataTrackerRsi(totalClosePeriod, period);  //dataTrackerRsi
         // backTesting(objectOperation); //recibo el objectOperation y lo procesa para calcular el backtesting
