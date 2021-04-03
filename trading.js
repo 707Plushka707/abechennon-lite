@@ -2,10 +2,9 @@ const Binance = require('node-binance-api');
 // require('./exchange');
 const { dataBackTesting, backTesting, dataTrackerRsi } = require('./backTesting');
 const strategy1 = require('./strategy');
-// const rsi = require('./indicator/rsi');
+const rsi = require('./indicator/rsi');
 const sma = require('./indicator/sma');
 const ema = require('./indicator/ema');
-const rsi = require('./indicator/rsi');
 const rma = require('./indicator/rma');
 
 const getData = async() => {
@@ -25,7 +24,7 @@ const getData = async() => {
     console.log('Conexion Binance OK! - rsi');
 
     //=================== Historico: los 500 ultimos close =====================
-    await binance.candlesticks("BTCUSDT", "15m", (error, ticks, symbol) => { //indice 0 mas viejo, indice 500 ultima
+    await binance.candlesticks("BTCUSDT", "1h", (error, ticks, symbol) => { //indice 0 mas viejo, indice 500 ultima
         ticks.forEach((val, i) => {
             arrayClose.push(ticks[i][4]); //en indice 4 esta el close
         });
@@ -34,7 +33,8 @@ const getData = async() => {
         //=================== Obtenemos 500 array de 14 periodos ===================
 
         // console.log("Rma: " + rma(arrayClose, length));
-        console.log("Rsi: " + rsi(arrayClose, length));
+        // console.log("Rsi: " + rsi(arrayClose, length));
+        console.log("Ema: " + ema(arrayClose, length));
 
         // let flagRma = true;
         // arrayClose.map((currentValue, idx, arrayClose) => {

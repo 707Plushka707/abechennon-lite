@@ -1,14 +1,18 @@
 const rma = require('./rma');
-const { change, srcLength, sum } = require('./utils');
+const sma = require('./sma');
+const { change, srcLength, sumArray, max } = require('./utils');
 
 const rsi = (src, length) => { // Este RSI recibe un arrayclose con la coleccion de 500 close
     let res;
+    let prevRmaGain, prevRmaLoss;
+    let flag = true;
 
-    src.forEach((curr, idx, src) => {
-        let arrayCloseLength = [];
+    src.forEach((currentValue, idx, src) => {
         const alpha = 1 / length;
+        let arrayCloseLength = [];
         let arrayGain = [];
         let arrayLoss = [];
+        let rs;
 
         start_idx = idx - length;
         upto_idx = idx;
@@ -16,25 +20,40 @@ const rsi = (src, length) => { // Este RSI recibe un arrayclose con la coleccion
             arrayCloseLength = src.slice(start_idx, upto_idx);
         };
         console.log(arrayCloseLength);
+        const lastValue = arrayCloseLength[arrayCloseLength.length - 1];
 
-        arrayCloseLength.forEach((curr, idx, arrayCloseLength) => {
-            change(curr, idx, arrayCloseLength) >= 0 ? arrayLoss.push(change(curr, idx, arrayCloseLength)) : 0.0
-            change(curr, idx, arrayCloseLength) < 0 ? arrayGain.push(change(curr, idx, arrayCloseLength) * -1) : 0.0
+        arrayCloseLength.forEach((currentValue, idx, arrayCloseLength) => {
+            // change(currentValue, idx, arrayCloseLength) >= 0 ? arrayGain.push(change(currentValue, idx, arrayCloseLength)) : 0.0
+            // change(currentValue, idx, arrayCloseLength) < 0 ? arrayLoss.push(change(currentValue, idx, arrayCloseLength) * -1) : 0.0
+            arrayGain.push(max(currentValue - arrayCloseLength[idx + 1], 0));
+            arrayLoss.push(max(arrayCloseLength[idx + 1] - currentValue, 0));
         });
-        console.log(curr);
+
+        console.log(lastValue)
+        console.log(currentValue);
         console.log(arrayGain);
         console.log(arrayLoss);
 
-        let avgGain = rma(arrayGain, length);
-        let avgLoss = rma(arrayLoss, length);
-
-        // let avgGain = sum(arrayGain) / 14; // Calculo clasico
-        // let avgLoss = sum(arrayLoss) / 14; // Calculo clasico
-
-        let rs = avgGain / avgLoss;
+        // let rs = (sumArray(arrayGain) / 14) / (sumArray(arrayLoss) / 14); // Calculo clasico
+        // let rs = sma(arrayGain, length) / sma(arrayLoss, length);
+        if (prevRmaGain == undefined || prevRmaLoss == undefined) {
+            flag == false;
+            rs = rma(arrayGain, length, prevRmaGain, lastValue, currentValue) / rma(arrayLoss, length, prevRmaLoss, lastValue, currentValue);
+            prevRmaGain = rma(arrayGain, length, prevRmaGain, lastValue, currentValue);
+            prevRmaLoss = rma(arrayLoss, length, prevRmaLoss, lastValue, currentValue);
+        } else {
+            console.log("RSI prevRmaGain " + prevRmaGain)
+            console.log("RSI prevRmaLoss " + prevRmaLoss)
+            rs = rma(arrayGain, length, prevRmaGain, lastValue, currentValue) / rma(arrayLoss, length, prevRmaLoss, lastValue, currentValue);
+            prevRmaGain = rma(arrayGain, length, prevRmaGain, lastValue, currentValue);
+            prevRmaLoss = rma(arrayLoss, length, prevRmaLoss, lastValue, currentValue);
+            console.log("RSI prevRmaGain " + prevRmaGain)
+            console.log("RSI prevRmaLoss " + prevRmaLoss)
+        }
 
         res = 100 - (100 / (1 + rs));
 
+        console.log("Rsi: " + res);
         console.log("========================================");
     });
 
