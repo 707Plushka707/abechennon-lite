@@ -8,7 +8,7 @@ const change = (curr, idx, src) => {
     };
 };
 
-// Recibe un array grande, y devuelve un/unos arrays reducidos con el length que se le pase
+// Recibe un array con la coleccion del historico, y devuelve un/unos arrays reducidos con el length que se le pase
 const srcLength = (src, length) => {
     let arrayCloseLength = [];
 

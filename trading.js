@@ -32,9 +32,10 @@ const getData = async() => {
 
         //=================== Obtenemos 500 array de 14 periodos ===================
 
-        // console.log("Rma: " + rma(arrayClose, length));
+        // console.log("Rma: " + rma(arrayClose, length)); // Test ok
         // console.log("Rsi: " + rsi(arrayClose, length));
-        console.log("Ema: " + ema(arrayClose, length));
+        rsi(arrayClose, length);
+        // console.log("Ema: " + ema(arrayClose, length)); // Test ok
 
         // let flagRma = true;
         // arrayClose.map((currentValue, idx, arrayClose) => {

@@ -5,51 +5,68 @@ const { change, srcLength, sumArray, max } = require('./utils');
 const rsi = (src, length) => { // Este RSI recibe un arrayclose con la coleccion de 500 close
     let res;
     let prevRmaGain, prevRmaLoss;
-    let flag = true;
 
-    src.forEach((currentValue, idx, src) => {
+    src.forEach((curr, idx, src) => {
         const alpha = 1 / length;
         let arrayCloseLength = [];
         let arrayGain = [];
         let arrayLoss = [];
-        let rs;
+        let lastValue, rs;
 
         start_idx = idx - length;
         upto_idx = idx;
         if (start_idx >= 0) {
-            arrayCloseLength = src.slice(start_idx, upto_idx);
+            arrayCloseLength = src.slice(start_idx, upto_idx); // Se arman los arrays con la longitud del length proporcionado
         };
-        console.log(arrayCloseLength);
-        const lastValue = arrayCloseLength[arrayCloseLength.length - 1];
+        // console.log(arrayCloseLength);
+        // console.log(curr) // Precio siguiente del array (no esta incluido en el array actual)
+        lastValue = arrayCloseLength[arrayCloseLength.length - 1]; // ultimo precio del array
+        // console.log(lastValue)
 
         arrayCloseLength.forEach((currentValue, idx, arrayCloseLength) => {
-            // change(currentValue, idx, arrayCloseLength) >= 0 ? arrayGain.push(change(currentValue, idx, arrayCloseLength)) : 0.0
-            // change(currentValue, idx, arrayCloseLength) < 0 ? arrayLoss.push(change(currentValue, idx, arrayCloseLength) * -1) : 0.0
-            arrayGain.push(max(currentValue - arrayCloseLength[idx + 1], 0));
-            arrayLoss.push(max(arrayCloseLength[idx + 1] - currentValue, 0));
+            change(currentValue, idx, arrayCloseLength) > 0 ? arrayGain.push(change(currentValue, idx, arrayCloseLength)) : 0.0
+            change(currentValue, idx, arrayCloseLength) < 0 ? arrayLoss.push(change(currentValue, idx, arrayCloseLength) * -1) : 0.0
+                // arrayGain.push(max(currentValue - arrayCloseLength[idx + 1], 0));
+                // arrayLoss.push(max(arrayCloseLength[idx + 1] - currentValue, 0));
         });
 
-        console.log(lastValue)
-        console.log(currentValue);
-        console.log(arrayGain);
-        console.log(arrayLoss);
+        // console.log("lastValue: " + lastValue)
+        // console.log("curr: " + curr);
+        // console.log(arrayGain);
+        // console.log(arrayLoss);
+        // console.log(arrayGain[arrayGain.length - 1])
+        // console.log(arrayLoss[arrayLoss.length - 1])
+        // console.log(sma(arrayGain, length))
+        // console.log(sma(arrayGain, arrayGain.length));
+        // console.log(prevRmaGain);
+        // console.log(prevRmaLoss);
 
-        // let rs = (sumArray(arrayGain) / 14) / (sumArray(arrayLoss) / 14); // Calculo clasico
-        // let rs = sma(arrayGain, length) / sma(arrayLoss, length);
-        if (prevRmaGain == undefined || prevRmaLoss == undefined) {
-            flag == false;
-            rs = rma(arrayGain, length, prevRmaGain, lastValue, currentValue) / rma(arrayLoss, length, prevRmaLoss, lastValue, currentValue);
-            prevRmaGain = rma(arrayGain, length, prevRmaGain, lastValue, currentValue);
-            prevRmaLoss = rma(arrayLoss, length, prevRmaLoss, lastValue, currentValue);
-        } else {
-            console.log("RSI prevRmaGain " + prevRmaGain)
-            console.log("RSI prevRmaLoss " + prevRmaLoss)
-            rs = rma(arrayGain, length, prevRmaGain, lastValue, currentValue) / rma(arrayLoss, length, prevRmaLoss, lastValue, currentValue);
-            prevRmaGain = rma(arrayGain, length, prevRmaGain, lastValue, currentValue);
-            prevRmaLoss = rma(arrayLoss, length, prevRmaLoss, lastValue, currentValue);
-            console.log("RSI prevRmaGain " + prevRmaGain)
-            console.log("RSI prevRmaLoss " + prevRmaLoss)
-        }
+        // if (prevRmaGain == NaN && prevRmaLoss == NaN) {
+        //     console.log("Con Sma");
+        //     // rmaGain = alpha * arrayGain[arrayGain.length - 1] + (1 - alpha) * sma(arrayGain, length);
+        //     rmaGain = alpha * arrayGain[arrayGain.length - 1] + (1 - alpha) * sma(arrayGain, arrayGain.length);
+        //     prevRmaGain = rmaGain;
+
+        //     // rmaLoss = alpha * arrayLoss[arrayLoss.length - 1] + (1 - alpha) * sma(arrayLoss, length);
+        //     rmaLoss = alpha * arrayLoss[arrayLoss.length - 1] + (1 - alpha) * sma(arrayLoss, arrayLoss.length);
+        //     prevRmaLoss = rmaLoss;
+        //     console.log(prevRmaGain);
+        //     console.log(prevRmaLoss);
+        // } else if (prevRmaGain != NaN && prevRmaLoss != NaN) {
+        //     console.log("Con prevRma");
+        //     console.log(prevRmaGain);
+        //     console.log(prevRmaLoss);
+        //     rmaGain = alpha * arrayGain[arrayGain.length - 1] + (1 - alpha) * prevRmaGain;
+        //     prevRmaGain = rmaGain;
+
+        //     rmaLoss = alpha * arrayLoss[arrayLoss.length - 1] + (1 - alpha) * prevRmaLoss;
+        //     prevRmaLoss = rmaLoss;
+        // };
+
+        rmaGain = alpha * arrayGain[arrayGain.length - 1] + (1 - alpha) * sma(arrayGain, arrayGain.length);
+        rmaLoss = alpha * arrayLoss[arrayLoss.length - 1] + (1 - alpha) * sma(arrayLoss, arrayLoss.length);
+
+        rs = rmaGain / rmaLoss;
 
         res = 100 - (100 / (1 + rs));
 
