@@ -1,3 +1,5 @@
+const tulind = require('tulind');
+const util = require('util') // util.inspect expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
 const rsi = require('./indicator/rsi');
 let strategy1 = require('./strategy');
 
@@ -11,36 +13,34 @@ let flagBuy = false;
 let objectOperation = new Object();
 let parcialPercent;
 let totalPercent = 0;
-let arrayTrackerRsi = [];
 
+const dataTrackerRsi = (src, length) => {
 
-const dataTrackerRsi = (totalClosePeriod, period) => {
-
-    totalClosePeriod.forEach((currentValue, idx, totalClosePeriod) => {
-        let calculateRsi = rsi(currentValue, period);
-
-        if (calculateRsi !== undefined) {
-            arrayTrackerRsi.push(calculateRsi);
-        } else {
-            arrayTrackerRsi.push(0);
-        };
+    let arrayTrackerRsi = tulind.indicators.rsi.indicator([src], [length], function(err, results) { // Resultados ok con tradingView
+        console.log(results[0])
+            // return results[0];
     });
 
-    arrayTrackerRsi.forEach((currentValue, idx, arrayTrackerRsi) => {
-        if (arrayTrackerRsi[idx] > arrayTrackerRsi[idx - 1] && arrayTrackerRsi[idx - 2] > arrayTrackerRsi[idx - 3]) {
-            flagBuy = true;
-            flagSell = false;
-            buy = buy + 1; //Contador buy
-            objectOperation['Buy_' + idx] = arrayTrackerRsi[idx];
-        } else if (arrayTrackerRsi[idx] < arrayTrackerRsi[idx - 1] && arrayTrackerRsi[idx - 2] < arrayTrackerRsi[idx - 3]) {
-            flagSell = true;
-            flagBuy = false;
-            sell = sell + 1; //Contador sell
-            objectOperation['Sell_' + idx] = arrayTrackerRsi[idx];
-        } else {};
+    // console.log(util.inspect(arrayTrackerRsi, { maxArrayLength: null }))
+
+    console.log(arrayTrackerRsi)
+    src.forEach((curr, idx, src) => {
+        // console.log(curr)
+
+        //     if (arrayTrackerRsi[idx] > arrayTrackerRsi[idx - 1] && arrayTrackerRsi[idx - 2] > arrayTrackerRsi[idx - 3] && flagBuy == false) {
+        //         flagBuy = true;
+        //         flagSell = false;
+        //         buy += 1; //Contador buy
+        //         objectOperation['Buy_' + idx] = arrayTrackerRsi[idx];
+        //     } else if (arrayTrackerRsi[idx] < arrayTrackerRsi[idx - 1] && arrayTrackerRsi[idx - 2] < arrayTrackerRsi[idx - 3] && flagSell == false) {
+        //         flagBuy = false;
+        //         flagSell = true;
+        //         sell += 1; //Contador sell
+        //         objectOperation['Sell_' + idx] = arrayTrackerRsi[idx];
+        //     } else {};
     });
     // console.log(objectOperation)
-    return objectOperation;
+    // return objectOperation;
 };
 
 const dataBackTesting = (idx, arrayClosePeriod, period) => { //Funcion para armar el objectOperation(objeto con las operaciones de compra/venta), que sera usado por el backTesting

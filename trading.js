@@ -1,5 +1,7 @@
 const Binance = require('node-binance-api');
-// require('./exchange');
+const tulind = require('tulind');
+const util = require('util') // util.inspect expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
+    // require('./exchange');
 const { dataBackTesting, backTesting, dataTrackerRsi } = require('./backTesting');
 const strategy1 = require('./strategy');
 const { rsi, rsiCutler } = require('./indicator/rsi');
@@ -24,21 +26,21 @@ const getData = async() => {
     console.log('Conexion Binance OK! - rsi');
 
     //=================== Historico: los 500 ultimos close =====================
-    await binance.candlesticks("BTCUSDT", "1h", (error, ticks, symbol) => { //indice 0 mas viejo, indice 500 ultima
+    await binance.candlesticks("BTCUSDT", "15m", (error, ticks, symbol) => { //indice 0 mas viejo, indice 500 ultima
         ticks.forEach((val, i) => {
             arrayClose.push(ticks[i][4]); //en indice 4 esta el close
         });
-        // console.log(arrayClose)
+        // console.log(util.inspect(arrayClose, { maxArrayLength: null }));
 
         //=================== Obtenemos 500 array de 14 periodos ===================
 
-        // console.log("Rma: " + rma(arrayClose, length)); // Test ok
-        // console.log("Rsi: " + rsi(arrayClose, length));
-        rsiCutler(arrayClose, length);
-        // console.log("Rsi: " + rsi(arrayClose, 14, 0, $offset = 0)) //($ar, $period, $opt, $offset = 0)
-        // console.log("Ema: " + ema(arrayClose, length)); // Test ok
+        // tulind.indicators.rsi.indicator([arrayClose], [14], function(err, results) { // Resultados ok con tradingView
+        //     console.log("Result of rsi oscillator is:");
+        //     console.log(util.inspect(results[0], { maxArrayLength: null }))
+        // });
 
-        // let flagRma = true;
+        dataTrackerRsi(arrayClose, length);
+
         // arrayClose.map((currentValue, idx, arrayClose) => {
         //     start_index = idx - period;
         //     upto_index = idx;
@@ -46,31 +48,24 @@ const getData = async() => {
         //     if (start_index >= 0) {
         //         arrayClosePeriod = arrayClose.slice(start_index, upto_index); //generamos el array arrayClosePeriod con 14 elem, para cada iteracion
         //     };
+
         //     // totalClosePeriod.push(arrayClosePeriod); // se genera un array con la coleccion de cada arrayClosePeriod
 
         //     // objectOperation = dataBackTesting(idx, arrayClosePeriod, period); //generando el objeto con los datos de las operaciones de compra/venta que sera usado por el backTesting
-        //     // console.log("Rsi: " + rsi(arrayClosePeriod, period));
-        //     // console.log("Rma: " + rma(arrayClosePeriod, period));
-        //     rma(arrayClosePeriod, period)
-        //         // console.log("Sma: " + sma(arrayClosePeriod, period));
-        //         // console.log("Ema: " + ema(totalClosePeriod, period));
-        //         // console.log("Rsi: " + rsi(totalClosePeriod, period));
         // });
-        // console.log("Ema: " + ema(totalClosePeriod, period));
-        // console.log("Rsi: " + rsi(totalClosePeriod, period));
 
         // objectOperation = dataTrackerRsi(totalClosePeriod, period);  //dataTrackerRsi
         // backTesting(objectOperation); //recibo el objectOperation y lo procesa para calcular el backtesting
     });
 
-    //============================================================
     //=================== Los 14 ultimos close ===================
-    await binance.candlesticks("BTCUSDT", "1m", (error, ticks, symbol) => {
-        ticks.forEach((val, i) => {
-            arrayCloseActual.push(ticks[i][4]); //en indice 4 esta el close
-        });
-        // console.log(arrayCloseActual);
-    }, { limit: 14 });
+
+    // await binance.candlesticks("BTCUSDT", "1m", (error, ticks, symbol) => {
+    //     ticks.forEach((val, i) => {
+    //         arrayCloseActual.push(ticks[i][4]); //en indice 4 esta el close
+    //     });
+    //     // console.log(arrayCloseActual);
+    // }, { limit: 14 });
 
     await binance.websockets.candlesticks(['BTCUSDT'], "1m", (candlesticks) => {
         let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlesticks;
