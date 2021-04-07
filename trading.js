@@ -2,7 +2,7 @@ const Binance = require('node-binance-api');
 // require('./exchange');
 const { dataBackTesting, backTesting, dataTrackerRsi } = require('./backTesting');
 const strategy1 = require('./strategy');
-const rsi = require('./indicator/rsi');
+const { rsi, rsiCutler } = require('./indicator/rsi');
 const sma = require('./indicator/sma');
 const ema = require('./indicator/ema');
 const rma = require('./indicator/rma');
@@ -34,7 +34,8 @@ const getData = async() => {
 
         // console.log("Rma: " + rma(arrayClose, length)); // Test ok
         // console.log("Rsi: " + rsi(arrayClose, length));
-        rsi(arrayClose, length);
+        rsiCutler(arrayClose, length);
+        // console.log("Rsi: " + rsi(arrayClose, 14, 0, $offset = 0)) //($ar, $period, $opt, $offset = 0)
         // console.log("Ema: " + ema(arrayClose, length)); // Test ok
 
         // let flagRma = true;

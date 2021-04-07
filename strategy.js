@@ -1,7 +1,8 @@
 const rsi = require('./indicator/rsi');
 
-const strategy1 = (array, period) => {
+const strategy1 = (src, length) => {
     let rsi = rsi(arrayClosePeriod, period);
+
 
 
 };
