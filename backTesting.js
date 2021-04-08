@@ -1,4 +1,3 @@
-const tulind = require('tulind');
 const util = require('util') // util.inspect expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
 const rsi = require('./indicator/rsi');
 let strategy1 = require('./strategy');
@@ -23,22 +22,22 @@ const dataTrackerRsi = (src, length) => {
 
     // console.log(util.inspect(arrayTrackerRsi, { maxArrayLength: null }))
 
-    console.log(arrayTrackerRsi)
-    src.forEach((curr, idx, src) => {
-        // console.log(curr)
+    // console.log(arrayTrackerRsi)
+    // src.forEach((curr, idx, src) => {
+    //     // console.log(curr)
 
-        //     if (arrayTrackerRsi[idx] > arrayTrackerRsi[idx - 1] && arrayTrackerRsi[idx - 2] > arrayTrackerRsi[idx - 3] && flagBuy == false) {
-        //         flagBuy = true;
-        //         flagSell = false;
-        //         buy += 1; //Contador buy
-        //         objectOperation['Buy_' + idx] = arrayTrackerRsi[idx];
-        //     } else if (arrayTrackerRsi[idx] < arrayTrackerRsi[idx - 1] && arrayTrackerRsi[idx - 2] < arrayTrackerRsi[idx - 3] && flagSell == false) {
-        //         flagBuy = false;
-        //         flagSell = true;
-        //         sell += 1; //Contador sell
-        //         objectOperation['Sell_' + idx] = arrayTrackerRsi[idx];
-        //     } else {};
-    });
+    //     //     if (arrayTrackerRsi[idx] > arrayTrackerRsi[idx - 1] && arrayTrackerRsi[idx - 2] > arrayTrackerRsi[idx - 3] && flagBuy == false) {
+    //     //         flagBuy = true;
+    //     //         flagSell = false;
+    //     //         buy += 1; //Contador buy
+    //     //         objectOperation['Buy_' + idx] = arrayTrackerRsi[idx];
+    //     //     } else if (arrayTrackerRsi[idx] < arrayTrackerRsi[idx - 1] && arrayTrackerRsi[idx - 2] < arrayTrackerRsi[idx - 3] && flagSell == false) {
+    //     //         flagBuy = false;
+    //     //         flagSell = true;
+    //     //         sell += 1; //Contador sell
+    //     //         objectOperation['Sell_' + idx] = arrayTrackerRsi[idx];
+    //     //     } else {};
+    // });
     // console.log(objectOperation)
     // return objectOperation;
 };

@@ -1,13 +1,11 @@
 const Binance = require('node-binance-api');
-const tulind = require('tulind');
 const util = require('util') // util.inspect expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
     // require('./exchange');
 const { dataBackTesting, backTesting, dataTrackerRsi } = require('./backTesting');
 const strategy1 = require('./strategy');
-const { rsi, rsiCutler } = require('./indicator/rsi');
+const rsi = require('./indicator/rsi');
 const sma = require('./indicator/sma');
 const ema = require('./indicator/ema');
-const rma = require('./indicator/rma');
 
 const getData = async() => {
     let arrayClose = [];
@@ -39,7 +37,9 @@ const getData = async() => {
         //     console.log(util.inspect(results[0], { maxArrayLength: null }))
         // });
 
-        dataTrackerRsi(arrayClose, length);
+        console.log("Rsi: " + rsi(arrayClose, length));
+        // rsi(arrayClose, length);
+        // dataTrackerRsi(arrayClose, length);
 
         // arrayClose.map((currentValue, idx, arrayClose) => {
         //     start_index = idx - period;
