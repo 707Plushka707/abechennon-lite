@@ -1,4 +1,7 @@
-const { changeUp, changeDown, srcLength, sumArray, max } = require('./utils');
+const { changeUp, changeDown } = require('./utils');
+
+let objectRsi = new Object();
+let arrayRes = new Array;
 
 const rsi = (src, length) => {
     const alpha = 1 / length;
@@ -18,6 +21,8 @@ const rsi = (src, length) => {
 
     res = 100.0 * (smooth_up / (smooth_up + smooth_down));
     // console.log("1er: " + res);
+    arrayRes.push(res);
+    // objectRsi['Rsi'] = res;
 
     for (i = length + 1; i < src.length; ++i) {
         upward = changeUp(i, src);
@@ -27,8 +32,10 @@ const rsi = (src, length) => {
 
         res = 100.0 * (smooth_up / (smooth_up + smooth_down));
         // console.log("2do: " + res);
+        // objectRsi['Rsi'] = res;
+        arrayRes.push(res);
     };
-    return res;
+    return arrayRes;
 };
 
 module.exports = rsi;

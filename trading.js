@@ -1,11 +1,9 @@
 const Binance = require('node-binance-api');
 const util = require('util') // util.inspect expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
     // require('./exchange');
-const { dataBackTesting, backTesting, dataTrackerRsi } = require('./backTesting');
+const { getDataBackTesting, backTesting } = require('./backTesting');
 const strategy1 = require('./strategy');
 const rsi = require('./indicator/rsi');
-const sma = require('./indicator/sma');
-const ema = require('./indicator/ema');
 
 const getData = async() => {
     let arrayClose = [];
@@ -13,8 +11,6 @@ const getData = async() => {
     let length = 14;
     let arrayClosePeriod = [];
     let totalClosePeriod = [];
-
-    // require('../exchange'); //Doble llamada
 
     //============================ Conexion Binance ============================
     const binance = await new Binance().options({ //Hacer que lea la conexion desde el archivo exchange!! 
@@ -30,16 +26,9 @@ const getData = async() => {
         });
         // console.log(util.inspect(arrayClose, { maxArrayLength: null }));
 
-        //=================== Obtenemos 500 array de 14 periodos ===================
-
-        // tulind.indicators.rsi.indicator([arrayClose], [14], function(err, results) { // Resultados ok con tradingView
-        //     console.log("Result of rsi oscillator is:");
-        //     console.log(util.inspect(results[0], { maxArrayLength: null }))
-        // });
-
-        console.log("Rsi: " + rsi(arrayClose, length));
-        // rsi(arrayClose, length);
-        // dataTrackerRsi(arrayClose, length);
+        // console.log(rsi(arrayClose, length));
+        getDataBackTesting(arrayClose, length);
+        // console.log(dataBackTesting(arrayClose, length));
 
         // arrayClose.map((currentValue, idx, arrayClose) => {
         //     start_index = idx - period;

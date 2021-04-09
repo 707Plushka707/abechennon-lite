@@ -1,7 +1,5 @@
-// Recibe un array y devuelve la diferencia entre cada elemento
+// Recibe un array y devuelve la diferencia hacia arriba de sus elementos
 const changeUp = (i, src) => {
-    // let upward = src[i] > src[i - 1] ? src[i] - src[i - 1] : 0;
-    // return upward;
     if (src[i] == undefined || src[i + 1] == undefined) {
         return 0;
     } else {
@@ -10,9 +8,8 @@ const changeUp = (i, src) => {
     };
 };
 
+// Recibe un array y devuelve la diferencia hacia abajo de sus elementos
 const changeDown = (i, src) => {
-    // let downward = src[i] < src[i - 1] ? src[i - 1] - src[i] : 0;
-    // return downward;
     if (src[i] == undefined || src[i + 1] == undefined) {
         return 0;
     } else {
@@ -61,4 +58,4 @@ module.exports = {
     srcLength,
     sumArray,
     max
-}
+};
