@@ -52,10 +52,19 @@ const max = (a, b) => {
     };
 };
 
-module.exports = {
-    changeUp,
-    changeDown,
-    srcLength,
-    sumArray,
-    max
+//
+const prevPrice = (i, src) => {
+    if (src[i - 1] == undefined) {
+        return 0;
+    } else {
+        return src[i - 1][1]
+    };
 };
+
+// Calcula el porcentage de un numero
+const percent = (curr, percent) => {
+    let res = (percent / 100) * curr;
+    return res;
+};
+
+module.exports = { changeUp, changeDown, srcLength, sumArray, max, prevPrice, percent };
