@@ -11,26 +11,24 @@ const strategy1 = (src, length) => { //Funcion para armar el objectOperation(obj
     let calculateRsi = rsi(src, length);
 
     calculateRsi.forEach((curr, i, p) => {
-        if (flagBuy == false && curr < 30)
-        //     &&curr >= p[i - 2] && curr > p[i - 1] && // valor actual (failure swing)
-        //     p[i - 1] < p[i - 2] && p[i - 1] > p[i - 3] && // p[i - 1]
-        //     p[i - 2] > p[i - 3] // p[i - 2]
-        //     // (p[i - 3] < p[i - 4]) // p[i - 3]
-        // ) 
-        {
-            // console.log("Long");
+        if (flagBuy == false && //BUY
+            curr < 50 &&
+            curr >= p[i - 2] && curr > p[i - 1] && // valor actual (failure swing)
+            p[i - 1] < p[i - 2] && p[i - 1] > p[i - 3] && // p[i - 1]
+            p[i - 2] > p[i - 3] && // p[i - 2]
+            (p[i - 3] < p[i - 4]) // p[i - 3]
+        ) {
             flagBuy = true;
             flagSell = false;
             buy += 1; //Contador buy
             objectOperation[`Buy_i-${i}_Rsi: ${curr}`] = src[i + 14];
-        } else if (flagSell == false && curr > 70)
-        //     &&curr <= p[i - 2] && curr < p[i - 1] &&
-        //     p[i - 1] > p[i - 2] && p[i - 1] < p[i - 3] && // p[i - 1]
-        //     p[i - 2] < p[i - 3] // p[i - 2]
-        //     // (p[i - 3] > p[i - 4]) // p[i - 3]
-        // ) 
-        {
-            // console.log("Short");
+        } else if (flagSell == false && // SELL
+            curr > 50 &&
+            curr <= p[i - 2] && curr < p[i - 1] &&
+            p[i - 1] > p[i - 2] && p[i - 1] < p[i - 3] && // p[i - 1]
+            p[i - 2] < p[i - 3] && // p[i - 2]
+            (p[i - 3] > p[i - 4]) // p[i - 3]
+        ) {
             flagBuy = false;
             flagSell = true;
             sell += 1; //Contador sell
@@ -42,4 +40,42 @@ const strategy1 = (src, length) => { //Funcion para armar el objectOperation(obj
     return objectOperation;
 };
 
-module.exports = { strategy1 };
+//=============================================================================================
+
+//Failure swing Rsi
+const strategy2 = (src, length) => {
+    let calculateRsi = rsi(src, length);
+    let flagOp;
+
+    calculateRsi.forEach((curr, i, p) => {
+        flagOp = undefined;
+
+        if (flagBuy == false && // BUY
+            curr < 50 &&
+            curr >= p[i - 2] && curr > p[i - 1] &&
+            p[i - 1] < p[i - 2] && p[i - 1] > p[i - 3] && // p[i - 1]
+            p[i - 2] > p[i - 3] && // p[i - 2]
+            (p[i - 3] < p[i - 4]) // p[i - 3]
+        ) {
+            flagBuy = true;
+            flagSell = false;
+            flagOp = 'buy';
+
+        } else if (flagSell == false && // SELL
+            curr > 50 &&
+            curr <= p[i - 2] && curr < p[i - 1] &&
+            p[i - 1] > p[i - 2] && p[i - 1] < p[i - 3] && // p[i - 1]
+            p[i - 2] < p[i - 3] && // p[i - 2]
+            (p[i - 3] > p[i - 4]) // p[i - 3]
+        ) {
+            flagBuy = false;
+            flagSell = true;
+            flagOp = 'sell';
+        };
+    });
+    console.log(`flagOp: ${flagOp}`);
+
+    return 'buy';
+};
+
+module.exports = { strategy1, strategy2 };

@@ -6,7 +6,7 @@ Este bot puede ser usado solo por desarrolladores/programadores ya que requiere 
 Ruta de trabajo: 
 
 * Trabajando en rsi-tracker
-* Calcular los fee en el backTesting
+* Corregir los fee en operaciones negativas
 
 * Proteger rutas, y la key
 * Instalar/configurar mongo

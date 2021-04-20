@@ -1,62 +1,99 @@
 const Binance = require('node-binance-api');
-const util = require('util') // util.inspect expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
-    // require('./exchange');
+const util = require('util') // expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
 const { getDataBackTesting, backTesting } = require('./backTesting');
-const { strategy1 } = require('./strategy');
-const rsi = require('./indicator/rsi');
+const { strategy1, strategy2 } = require('./strategy');
 
-const getData = async() => {
-    let arrayClose = [];
-    let arrayCloseActual = [];
+const trading = async() => {
     let length = 14;
-    let arrayClosePeriod = [];
-    let totalClosePeriod = [];
+    let arrayClose = [];
+    let quantity = 0.000213; // usd 12, calculado a 56mil, usar para el test!
+    // let quantity = 0.00186084; //usd 100 (1 lote), calculado a 56mil. Representa 2% de la cuenta (se pueden exponer por vez 10 lotes (20%))
 
     //============================ Conexion Binance ============================
     const binance = await new Binance().options({ //Hacer que lea la conexion desde el archivo exchange!! 
         APIKEY: 'g43IhfkuGEnQzp1mstGMBrrnrTB0WkOHOZ6eLy0bNBaGTqE1OOJOCl7HBNJ1CIoJ',
-        APISECRET: 'WYRseAeFwqwJTyo1P8ughTDnhqswCSfv8vdLInuDKmbPhX7brVmAXsk8sibOyjhW'
+        APISECRET: 'WYRseAeFwqwJTyo1P8ughTDnhqswCSfv8vdLInuDKmbPhX7brVmAXsk8sibOyjhW',
+        // 'test': true
     });
-    console.log('Conexion Binance OK! - rsi');
+    console.log('Conexion Binance OK!');
+
+    // const asyncAwait = (async _ => {
+    //     try {
+    //         await binance.mgMarketBuy("BTCUSDT", quantity);
+    //     } catch (error) {
+    //         console.error(error);
+    //     };
+    // })();
+
+    // const comprando = (async _ => {
+    //     try {
+    //         await binance.mgBorrow("USDT", 12, (error, response) => {
+    //             if (error) return console.warn(error);
+    //             else console.log("Success!");
+    //             // Success! Transaction ID: response.tranId
+    //         });
+
+    //         await binance.mgMarketBuy("BTCUSDT", quantity);
+    //     } catch (error) {
+    //         console.error("Error!");
+    //         console.error(error);
+    //     };
+    // })();
+
+    // const vendiendo = (async _ => {
+    //     try {
+    //         await binance.mgMarketSell("BTCUSDT", quantity);
+
+    //         // await binance.mgRepay("USDT", 12, (error, response) => {
+    //         //     if (error) return console.warn(error);
+    //         //     else console.log("Success!");
+    //         //     // Success! Transaction ID: response.tranId
+    //         // });
+    //     } catch (error) {
+    //         console.error("Error!");
+    //         console.error(error);
+    //     };
+    // })();
 
     //=================== Historico: los 500 ultimos close =====================
-    await binance.candlesticks("BTCUSDT", "15m", (error, ticks, symbol) => { //indice 0 mas viejo, indice 500 ultima
-        ticks.forEach((val, i) => {
-            arrayClose.push(ticks[i][4]); //en indice 4 esta el close
-        });
-        // console.log(util.inspect(arrayClose, { maxArrayLength: null }));
-
-        // let dataBackTesting = getDataBackTesting(arrayClose, length);
-        let dataBackTesting = strategy1(arrayClose, length);
-
-        backTesting(dataBackTesting);
-
-    });
-
-    //=================== Los 14 ultimos close ===================
-
-    // await binance.candlesticks("BTCUSDT", "1m", (error, ticks, symbol) => {
+    // await binance.candlesticks("BTCUSDT", "1m", (error, ticks, symbol) => { //indice 0 mas viejo, indice 500 ultima
     //     ticks.forEach((val, i) => {
-    //         arrayCloseActual.push(ticks[i][4]); //en indice 4 esta el close
+    //         arrayClose.push(ticks[i][4]); //en indice 4 esta el close
     //     });
-    //     // console.log(arrayCloseActual);
-    // }, { limit: 14 });
+    //     arrayClose.pop(); // elimina el ultimo por que no es "isFinal"
 
-    await binance.websockets.candlesticks(['BTCUSDT'], "1m", (candlesticks) => {
-        let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlesticks;
-        let { o: open, h: high, l: low, c: close, v: volume, n: trades, i: interval, x: isFinal, q: quoteVolume, V: buyVolume, Q: quoteBuyVolume } = ticks;
-        if (isFinal == true) {
-            console.log('---------------------------------------');
-            console.log('Ultimo precio: ' + close);
-            arrayCloseActual.shift();
-            arrayCloseActual.push(close);
-            // console.log(arrayCloseActual);
-            // strategy1(arrayCloseActual, period);
-            // backTesting(arrayCloseActual, period);
-        };
-    });
+    //     // let dataBackTesting = getDataBackTesting(arrayClose, length);
+    //     let dataBackTesting = strategy1(arrayClose, length);
+    //     backTesting(dataBackTesting);
+
+    // });
+
+    // await binance.websockets.candlesticks(['BTCUSDT'], "1m", (candlesticks) => {
+    //     let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlesticks;
+    //     let { o: open, h: high, l: low, c: close, v: volume, n: trades, i: interval, x: isFinal, q: quoteVolume, V: buyVolume, Q: quoteBuyVolume } = ticks;
+    //     if (isFinal == true) {
+    //         console.log('---------------------------------------');
+    //         console.log('Ultimo precio: ' + close);
+    //         arrayClose.shift(); // elimina el primero
+    //         arrayClose.push(close); // agrega el ultimo
+    //         // console.log(util.inspect(arrayClose, { maxArrayLength: null }));
+
+    //         let flagOp = strategy2(arrayClose, length); // aqui la estrategia a usar
+
+    //         if (flagOp == 'buy') { // ejecutamos la senal que brinda la estrategia
+    //             console.log(`Compramos..`);
+
+    //             binance.marketBuy("BTCUSDT", quantity);
+    //         } else if (flagOp == 'sell') {
+    //             console.log(`Vendemos..`);
+
+    //         };
+    //     };
+    // });
+
+
 };
 
-getData();
+trading();
 
-// module.exports = getData;
+// module.exports = trading;
