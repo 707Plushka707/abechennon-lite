@@ -61,7 +61,7 @@ const trading = async() => {
 
             let flagOp = strategy2(arrayClose, length); // aqui la estrategia a usar
 
-            if (flagStart == true) {
+            if (flagStart == true && flagOp == !undefined) {
                 flagStart = false;
                 const borrow = (async _ => {
                     try {
@@ -73,67 +73,63 @@ const trading = async() => {
                         console.error(error);
                     };
                 })();
-                if (flagOp == 'buy') { // ejecutamos la senal que brinda la estrategia
-                    console.log(`Compramos..`);
+                if (flagOp == 'buy') {
                     const comprando = (async _ => {
                         try {
                             await binance.mgMarketBuy("BTCUSDT", quantity);
+                            console.log("Buy Success!");
                         } catch (error) {
                             console.error(error);
                         };
                     })();
                 } else if (flagOp == 'sell') {
-                    console.log(`Vendemos..`);
                     const vendiendo = (async _ => {
                         try {
                             await binance.mgMarketSell("BTCUSDT", quantity);
+                            console.log("Sell Success!");
                         } catch (error) {
                             console.error(error);
                         };
                     })();
                 };
-            };
-
-            if (flagStart == false && flagFirstOp == true) {
+            } else if (flagStart == false && flagFirstOp == true) {
                 flagFirstOp = false;
-                if (flagOp == 'buy') { // ejecutamos la senal que brinda la estrategia
-                    console.log(`Compramos..`);
+                if (flagOp == 'buy') {
                     const comprando = (async _ => {
                         try {
                             await binance.mgMarketBuy("BTCUSDT", quantity);
+                            console.log("Buy Success!");
                         } catch (error) {
                             console.error(error);
                         };
                     })();
                 } else if (flagOp == 'sell') {
-                    console.log(`Vendemos..`);
                     const vendiendo = (async _ => {
                         try {
                             await binance.mgMarketSell("BTCUSDT", quantity);
+                            console.log("Sell Success!");
                         } catch (error) {
                             console.error(error);
                         };
                     })();
                 };
-            };
-
-            if (flagStart == false && flagFirstOp == false) {
-                if (flagOp == 'buy') { // ejecutamos la senal que brinda la estrategia
-                    console.log(`Compramos..`);
+            } else if (flagStart == false && flagFirstOp == false) {
+                if (flagOp == 'buy') {
                     const comprando = (async _ => {
                         try {
                             await binance.mgMarketBuy("BTCUSDT", quantity);
                             await binance.mgMarketBuy("BTCUSDT", quantity);
+                            console.log("Buy Success!");
                         } catch (error) {
                             console.error(error);
                         };
                     })();
                 } else if (flagOp == 'sell') {
-                    console.log(`Vendemos..`);
                     const vendiendo = (async _ => {
                         try {
                             await binance.mgMarketSell("BTCUSDT", quantity);
                             await binance.mgMarketSell("BTCUSDT", quantity);
+                            console.log("Sell Success!");
                         } catch (error) {
                             console.error(error);
                         };
