@@ -73,9 +73,9 @@ const strategy2 = (src, length) => {
             flagOp = 'sell';
         };
     });
-    console.log(`flagOp: ${flagOp}`);
+    // console.log(`flagOp: ${flagOp}`);
 
-    return 'buy';
+    return flagOp;
 };
 
 module.exports = { strategy1, strategy2 };

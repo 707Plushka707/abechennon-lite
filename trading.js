@@ -6,7 +6,7 @@ const { strategy1, strategy2 } = require('./strategy');
 const trading = async() => {
     let length = 14;
     let arrayClose = [];
-    let quantity = 0.000213; // usd 12, calculado a 56mil, usar para el test!
+    // let quantity = 0.000213; // usd 12, calculado a 56mil, usar para el test!
     // let quantity = 0.00186084; //usd 100 (1 lote), calculado a 56mil. Representa 2% de la cuenta (se pueden exponer por vez 10 lotes (20%))
 
     //============================ Conexion Binance ============================
@@ -17,83 +17,133 @@ const trading = async() => {
     });
     console.log('Conexion Binance OK!');
 
-    // const asyncAwait = (async _ => {
-    //     try {
-    //         await binance.mgMarketBuy("BTCUSDT", quantity);
-    //     } catch (error) {
-    //         console.error(error);
-    //     };
-    // })();
+    // binance.mgAccount((error, response) => {
+    //     if (error) return console.warn(error);
+    //     // console.info("Account details response:", response)
+    //     // console.log(response.userAssets);
+    //     let userAssets = response.userAssets;
 
-    // const comprando = (async _ => {
-    //     try {
-    //         await binance.mgBorrow("USDT", 12, (error, response) => {
-    //             if (error) return console.warn(error);
-    //             else console.log("Success!");
-    //             // Success! Transaction ID: response.tranId
-    //         });
-
-    //         await binance.mgMarketBuy("BTCUSDT", quantity);
-    //     } catch (error) {
-    //         console.error("Error!");
-    //         console.error(error);
-    //     };
-    // })();
-
-    // const vendiendo = (async _ => {
-    //     try {
-    //         await binance.mgMarketSell("BTCUSDT", quantity);
-
-    //         // await binance.mgRepay("USDT", 12, (error, response) => {
-    //         //     if (error) return console.warn(error);
-    //         //     else console.log("Success!");
-    //         //     // Success! Transaction ID: response.tranId
-    //         // });
-    //     } catch (error) {
-    //         console.error("Error!");
-    //         console.error(error);
-    //     };
-    // })();
+    //     userAssets.filter(userAsset => {
+    //         // console.log(userAsset)
+    //     });
+    // });
 
     //=================== Historico: los 500 ultimos close =====================
-    // await binance.candlesticks("BTCUSDT", "1m", (error, ticks, symbol) => { //indice 0 mas viejo, indice 500 ultima
-    //     ticks.forEach((val, i) => {
-    //         arrayClose.push(ticks[i][4]); //en indice 4 esta el close
-    //     });
-    //     arrayClose.pop(); // elimina el ultimo por que no es "isFinal"
+    await binance.candlesticks("BTCUSDT", "15m", (error, ticks, symbol) => { //indice 0 mas viejo, indice 500 ultima
+        ticks.forEach((val, i) => {
+            arrayClose.push(ticks[i][4]); //en indice 4 esta el close
+        });
+        arrayClose.pop(); // elimina el ultimo por que no es "isFinal"
 
-    //     // let dataBackTesting = getDataBackTesting(arrayClose, length);
-    //     let dataBackTesting = strategy1(arrayClose, length);
-    //     backTesting(dataBackTesting);
+        // let dataBackTesting = getDataBackTesting(arrayClose, length);
 
-    // });
+        let dataBackTesting = strategy1(arrayClose, length); //<==
+        backTesting(dataBackTesting); //<==
 
-    // await binance.websockets.candlesticks(['BTCUSDT'], "1m", (candlesticks) => {
-    //     let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlesticks;
-    //     let { o: open, h: high, l: low, c: close, v: volume, n: trades, i: interval, x: isFinal, q: quoteVolume, V: buyVolume, Q: quoteBuyVolume } = ticks;
-    //     if (isFinal == true) {
-    //         console.log('---------------------------------------');
-    //         console.log('Ultimo precio: ' + close);
-    //         arrayClose.shift(); // elimina el primero
-    //         arrayClose.push(close); // agrega el ultimo
-    //         // console.log(util.inspect(arrayClose, { maxArrayLength: null }));
+    });
 
-    //         let flagOp = strategy2(arrayClose, length); // aqui la estrategia a usar
+    const lot = 100; // lote valor = 100usd
+    let flagStart = true;
+    let flagFirstOp = true;
 
-    //         if (flagOp == 'buy') { // ejecutamos la senal que brinda la estrategia
-    //             console.log(`Compramos..`);
+    await binance.websockets.candlesticks(['BTCUSDT'], "15m", (candlesticks) => {
+        let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlesticks;
+        let { o: open, h: high, l: low, c: close, v: volume, n: trades, i: interval, x: isFinal, q: quoteVolume, V: buyVolume, Q: quoteBuyVolume } = ticks;
+        if (isFinal == true) {
+            console.log('---------------------------------------');
+            console.log('Ultimo precio: ' + close);
+            arrayClose.shift(); // elimina el primero
+            arrayClose.push(close); // agrega el ultimo
+            // console.log(util.inspect(arrayClose, { maxArrayLength: null }));
 
-    //             binance.marketBuy("BTCUSDT", quantity);
-    //         } else if (flagOp == 'sell') {
-    //             console.log(`Vendemos..`);
+            let quantity = (lot * 1.000000) / close; // calcular valor lote en BTC
+            // console.log(`quantity ${quantity}`);
 
-    //         };
-    //     };
-    // });
+            let flagOp = strategy2(arrayClose, length); // aqui la estrategia a usar
 
+            if (flagStart == true) {
+                flagStart = false;
+                const borrow = (async _ => {
+                    try {
+                        await binance.mgBorrow("USDT", lot + 4, (error, response) => {
+                            if (error) return console.warn(error);
+                            else console.log("Borrow Success!");
+                        });
+                    } catch (error) {
+                        console.error(error);
+                    };
+                })();
+                if (flagOp == 'buy') { // ejecutamos la senal que brinda la estrategia
+                    console.log(`Compramos..`);
+                    const comprando = (async _ => {
+                        try {
+                            await binance.mgMarketBuy("BTCUSDT", quantity);
+                        } catch (error) {
+                            console.error(error);
+                        };
+                    })();
+                } else if (flagOp == 'sell') {
+                    console.log(`Vendemos..`);
+                    const vendiendo = (async _ => {
+                        try {
+                            await binance.mgMarketSell("BTCUSDT", quantity);
+                        } catch (error) {
+                            console.error(error);
+                        };
+                    })();
+                };
+            };
+
+            if (flagStart == false && flagFirstOp == true) {
+                flagFirstOp = false;
+                if (flagOp == 'buy') { // ejecutamos la senal que brinda la estrategia
+                    console.log(`Compramos..`);
+                    const comprando = (async _ => {
+                        try {
+                            await binance.mgMarketBuy("BTCUSDT", quantity);
+                        } catch (error) {
+                            console.error(error);
+                        };
+                    })();
+                } else if (flagOp == 'sell') {
+                    console.log(`Vendemos..`);
+                    const vendiendo = (async _ => {
+                        try {
+                            await binance.mgMarketSell("BTCUSDT", quantity);
+                        } catch (error) {
+                            console.error(error);
+                        };
+                    })();
+                };
+            };
+
+            if (flagStart == false && flagFirstOp == false) {
+                if (flagOp == 'buy') { // ejecutamos la senal que brinda la estrategia
+                    console.log(`Compramos..`);
+                    const comprando = (async _ => {
+                        try {
+                            await binance.mgMarketBuy("BTCUSDT", quantity);
+                            await binance.mgMarketBuy("BTCUSDT", quantity);
+                        } catch (error) {
+                            console.error(error);
+                        };
+                    })();
+                } else if (flagOp == 'sell') {
+                    console.log(`Vendemos..`);
+                    const vendiendo = (async _ => {
+                        try {
+                            await binance.mgMarketSell("BTCUSDT", quantity);
+                            await binance.mgMarketSell("BTCUSDT", quantity);
+                        } catch (error) {
+                            console.error(error);
+                        };
+                    })();
+                };
+            };
+
+        };
+    });
 
 };
 
 trading();
-
-// module.exports = trading;
