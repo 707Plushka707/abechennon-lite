@@ -1,8 +1,12 @@
 const express = require('express');
+require('dotenv').config();
 const path = require('path');
 const bodyParser = require('body-parser');
 require('./config/config');
 require('./trading');
+// if (process.env.NODE_ENV = 'production') {
+//     require('dotenv').config();
+// };
 
 // creando el server
 const app = express();

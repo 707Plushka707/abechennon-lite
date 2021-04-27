@@ -1,16 +1,35 @@
-const { sumArray } = require('./utils');
+const util = require('util') // expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
+const { sumArray, srcLength } = require('./utils');
 
-// tiene que dar de resultado: sma 52127.64 
-const src = [45135.66, 49587.03, 48440.65, 50349.37, 48374.09, 48751.71, 48882.2, 50971.75, 52375.17, 54884.5, 55851.59, 57773.16, 57221.72, 61188.39];
-
+// Recibe un/unos arrays con la coleccion de valores individuales o historicos. Devuelve el valor del sma, en el caso de historicos devuelve un array con los sma
 const sma = (src, length) => {
+    try {
+        if (src.length != length) { // En este caso recibe un array con la coleccion de array de valores historicos
+            let arrayPointSma = new Array;
 
-    let sum = sumArray(src);
+            let arrayCloseLength = srcLength(src, length);
 
-    let sma = sum / length;
-    return sma;
+            arrayCloseLength.map((curr, idx, p) => {
+                let arrayPointLength = arrayCloseLength[idx];
+
+                let sum = sumArray(arrayPointLength);
+                let sma = sum / length;
+
+                arrayPointSma.push(sma);
+            });
+
+            return arrayPointSma;
+
+        } else { // En este caso recibe un array individual, o sea con la logitud igual al length dado
+            let sum = sumArray(src);
+            let sma = sum / length;
+
+            return sma;
+        };
+
+    } catch (error) {
+        console.log(error);
+    };
 };
-
-// console.log("Sma: " + sma(src, 14))
 
 module.exports = sma;

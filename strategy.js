@@ -1,4 +1,5 @@
 const rsi = require('./indicator/rsi');
+const sma = require('./indicator/sma');
 
 let buy = 0;
 let sell = 0;
@@ -21,7 +22,7 @@ const strategy1 = (src, length) => { //Funcion para armar el objectOperation(obj
             flagBuy = true;
             flagSell = false;
             buy += 1; //Contador buy
-            objectOperation[`Buy_i-${i}_Rsi: ${curr}`] = src[i + 14];
+            objectOperation[`Buy_i-${i}_Rsi: ${curr}`] = src[i + length];
         } else if (flagSell == false && // SELL
             curr > 50 &&
             curr <= p[i - 2] && curr < p[i - 1] &&
@@ -32,7 +33,7 @@ const strategy1 = (src, length) => { //Funcion para armar el objectOperation(obj
             flagBuy = false;
             flagSell = true;
             sell += 1; //Contador sell
-            objectOperation[`Sell_i-${i}_Rsi: ${curr}`] = src[i + 14];
+            objectOperation[`Sell_i-${i}_Rsi: ${curr}`] = src[i + length];
         };
     });
     console.log(`Buy: ${buy}`);
@@ -77,5 +78,43 @@ const strategy2 = (src, length) => {
 
     return flagOp;
 };
+
+//=============================================================================================
+
+const strategy3 = (src, length) => {
+    let calculateRsi = rsi(src, length);
+    let flagOp;
+
+    calculateRsi.forEach((curr, i, p) => {
+        flagOp = undefined;
+
+        if (flagBuy == false && // BUY
+            curr < 50 &&
+            curr >= p[i - 2] && curr > p[i - 1] &&
+            p[i - 1] < p[i - 2] && p[i - 1] > p[i - 3] && // p[i - 1]
+            p[i - 2] > p[i - 3] && // p[i - 2]
+            (p[i - 3] < p[i - 4]) // p[i - 3]
+        ) {
+            flagBuy = true;
+            flagSell = false;
+            flagOp = 'buy';
+
+        } else if (flagSell == false && // SELL
+            curr > 50 &&
+            curr <= p[i - 2] && curr < p[i - 1] &&
+            p[i - 1] > p[i - 2] && p[i - 1] < p[i - 3] && // p[i - 1]
+            p[i - 2] < p[i - 3] && // p[i - 2]
+            (p[i - 3] > p[i - 4]) // p[i - 3]
+        ) {
+            flagBuy = false;
+            flagSell = true;
+            flagOp = 'sell';
+        };
+    });
+    // console.log(`flagOp: ${flagOp}`);
+
+    return flagOp;
+};
+
 
 module.exports = { strategy1, strategy2 };

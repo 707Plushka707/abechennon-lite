@@ -10,11 +10,15 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "@mapbox/node-pre-gyp": "^1.0.4",
         "body-parser": "^1.19.0",
         "chart.js": "^3.0.2",
         "express": "^4.17.1",
         "mongoose": "^5.10.0",
         "node-binance-api": "^0.11.11",
         "util": "^0.12.3"
+    },
+    "devDependencies": {
+        "dotenv": "^8.2.0"
     }
 }

@@ -24,12 +24,12 @@ const getDataBackTesting = (src, length) => { //Funcion para armar el objectOper
             flagBuy = true;
             flagSell = false;
             buy = buy + 1; //Contador buy
-            objectOperation[`Buy_i-${i}_Rsi: ${curr}`] = src[i + 14];
+            objectOperation[`Buy_i-${i}_Rsi: ${curr}`] = src[i + length];
         } else if (curr >= 70 && flagSell == false) {
             flagBuy = false;
             flagSell = true;
             sell = sell + 1; //Contador sell
-            objectOperation[`Sell_i-${i}_Rsi: ${curr}`] = src[i + 14];
+            objectOperation[`Sell_i-${i}_Rsi: ${curr}`] = src[i + length];
         } else {};
     });
     return objectOperation;
