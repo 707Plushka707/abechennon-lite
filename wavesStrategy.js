@@ -3,7 +3,7 @@ const { srcLength, changeUp, changeDown } = require('./indicator/utils');
 const sma = require('./indicator/sma');
 
 const waves = (src, length) => {
-    let arrayPointSma = sma(src, 7); // suavizado de senales con sma, okok
+    let arrayPointSma = sma(src, length); // suavizado de senales con sma, okok
     let flagOp;
 
     arrayPointSma.map((curr, idx, p) => {
@@ -42,7 +42,7 @@ let flagSell = false;
 
 const wavesBackTesting = (src, length) => {
     let objectPoint = new Object();
-    let arrayPointSma = sma(src, 7); // suavizado de senales con sma, okok
+    let arrayPointSma = sma(src, length); // suavizado de senales con sma, okok
     // let arrayPointSma = src; // muchas falsas senales..
 
     arrayPointSma.map((curr, idx, p) => {
