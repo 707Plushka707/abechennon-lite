@@ -2,6 +2,8 @@ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 require('./config/config');
+// const binance = require('./exchange');
+// require('./backTesting');
 require('./trading');
 // require('dotenv').config();
 // if (process.env.NODE_ENV = 'production') {
