@@ -8,7 +8,7 @@ const trading = async() => {
     let symbol = "BTCUSDT";
     let currency = "BTC";
     let fiat = "USDT";
-    let timeFrame = "1m";
+    let timeFrame = "15m";
     let length = 7;
     let arrayClose = [];
     // let close;
@@ -101,6 +101,7 @@ const trading = async() => {
             const order = (async _ => {
                 try {
                     if (flagStart == true && flagOp != undefined) {
+                        console.log(`Last price: ${close}`);
                         flagStart = false;
                         if (flagOp == 'buy') {
                             // console.log(`1.0) Take borrow, lot: ${fiat} ${lot}`);
@@ -118,7 +119,7 @@ const trading = async() => {
                                 while (status == "error") {
                                     attemps++;
                                     console.log(`1.0) Start, mgBorrowLong BORROW Status: ${status}. Attemps: ${attemps}`);
-                                    setTimeout(mgBorrowLong, 3000);
+                                    setInterval(mgBorrowLong, 3000);
                                 };
                             });
                             // console.log(`1.1) Start, long.. BUY lot: ${symbol} ${quantity}`);
@@ -140,7 +141,7 @@ const trading = async() => {
                                 while (status == "error") {
                                     attemps++;
                                     console.log(`1.0) Start, mgBorrowShort BORROW Status: ${status}. Attemps: ${attemps}`);
-                                    setTimeout(mgBorrowShort, 3000);
+                                    setInterval(mgBorrowShort, 3000);
                                 };
                             });
                             // console.log(`1.1) Start, long.. BUY lot: ${symbol} ${quantity}`);
@@ -149,7 +150,7 @@ const trading = async() => {
 
                     } else if (flagStart == false && flagOp != undefined) {
                         console.log("--------------------------------------------------")
-
+                        console.log(`Last price: ${close}`);
                         if (flagOp == 'buy') { // arrastro un short
                             console.log(`2.0) Norm, Close Short.. BUY lot: ${symbol} ${quantity}`);
                             await binance.mgMarketBuy(symbol, quantity); //cerrar el short, debo btc
@@ -177,7 +178,7 @@ const trading = async() => {
                                         while (status == "error") {
                                             attemps++;
                                             console.log(`2.2) Norm, mgBorrowLongNorm BORROW Status: ${status}. Attemps: ${attemps}`);
-                                            setTimeout(mgBorrowLongNorm, 3000);
+                                            setInterval(mgBorrowLongNorm, 3000);
                                         };
                                     });
                                     // console.log(`2.3) Norm, Open Long..BUY lot: ${symbol} ${quantity}`);
@@ -186,7 +187,7 @@ const trading = async() => {
                                 while (status == "error") {
                                     attemps++;
                                     console.log(`2.1) Norm, mgRepayCurrency REPAY Status: ${status}. Attemps: ${attemps}`);
-                                    setTimeout(mgRepayCurrency, 3000);
+                                    setInterval(mgRepayCurrency, 3000);
                                 };
                             });
 
@@ -217,7 +218,7 @@ const trading = async() => {
                                         while (status == "error") {
                                             attemps++;
                                             console.log(`2.2) Norm, mgBorrowShortNorm BORROW Status: ${status}. Attemps: ${attemps}`);
-                                            setTimeout(mgBorrowShortNorm, 3000);
+                                            setInterval(mgBorrowShortNorm, 3000);
                                         };
                                     });
                                     // console.log(`2.3) Norm, Open short.. lot: ${symbol} ${quantity}`);
@@ -226,7 +227,7 @@ const trading = async() => {
                                 while (status == "error") {
                                     attemps++;
                                     console.log(`2.1) Norm, mgRepayFiat REPAY Status: ${status}. Attemps: ${attemps}`);
-                                    setTimeout(mgRepayFiat, 3000);
+                                    setInterval(mgRepayFiat, 3000);
                                 };
                             });
                         };
