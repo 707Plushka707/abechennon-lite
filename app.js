@@ -17,12 +17,12 @@ const app = express();
 app.use(express.json());
 
 app.get("/", (req, res) => {
-    res.send(`Abechenoon!`);
+    res.send(`Condor!`);
 });
 
 //Lanzando el server
 app.listen(process.env.PORT, () => {
-    let response = 'Escuchando en puerto: ' + process.env.PORT;
+    let response = '- Listening port: ' + process.env.PORT;
     return console.log(response);
 });
 

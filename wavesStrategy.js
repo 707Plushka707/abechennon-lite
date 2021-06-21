@@ -2,7 +2,7 @@ const util = require('util') // expandir items del console.log => console.log(ut
 const { srcLength, changeUp, changeDown } = require('./indicator/utils');
 const sma = require('./indicator/sma');
 
-const waves = (src, length) => {
+const waves = async(src, length) => {
     let arrayPointSma = sma(src, length); // suavizado de senales con sma, okok
     let flagOp;
     // console.log(util.inspect(arrayPointSma, { maxArrayLength: null }));
@@ -56,7 +56,7 @@ const wavesBackTesting = (src, length) => {
             flagBuy = true;
             flagSell = false;
             buy += 1; //Contador buy
-            objectPoint[`Buy_${idx}-${i}`] = curr.toFixed(4);
+            objectPoint[`Buy_${idx}-${i}`] = curr.toFixed(2);
         } else if (flagSell == false &&
             curr < p[idx - 1] && curr < p[idx - 2]
             // && p[idx - 3] > p[idx - 4] && p[idx - 3] > p[idx - 2]
@@ -64,7 +64,7 @@ const wavesBackTesting = (src, length) => {
             flagBuy = false;
             flagSell = true;
             sell += 1; //Contador sell
-            objectPoint[`Sell_${idx}-${i}`] = curr.toFixed(4);
+            objectPoint[`Sell_${idx}-${i}`] = curr.toFixed(2);
         }
         //  else {
         //     objectPoint[`${idx}-_${i}`] = curr;
