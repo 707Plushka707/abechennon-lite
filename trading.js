@@ -17,7 +17,7 @@ const trading = async() => {
     let flagStart = true; // default: true
 
     console.log("***Trader Bot Binance***");
-    console.log(`TimeFrame: ${timeFrame} | Markets: ${symbol} | Lot Usdt: ${lot}`);
+    console.log(`TimeFrame: ${timeFrame} | Markets: ${symbol} | Lote Usdt: ${lot}`);
     // console.log(`fiat ${fiat}, lot ${lot}`);
     // console.log(`symbol ${symbol}, quantity ${quantity}`);
     // console.log(`currency ${currency}, quantity ${quantity}`);
