@@ -16,14 +16,14 @@ const waves = async(src, length) => {
         ) {
             flagBuy = true;
             flagSell = false;
-            flagOp = 'buy';
+            flagOp = 'sell';
         } else if (flagSell == false &&
             curr < p[idx - 1] && curr < p[idx - 2]
             // && p[idx - 3] > p[idx - 4] && p[idx - 3] > p[idx - 2]
         ) {
             flagBuy = false;
             flagSell = true;
-            flagOp = 'sell';
+            flagOp = 'buy';
         }
         //  else {
         //     objectPoint[`${idx}-_${i}`] = curr;
