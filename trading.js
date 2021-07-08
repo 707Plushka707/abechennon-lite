@@ -13,7 +13,6 @@ const binance = require('./exchange');
 const util = require('util') // expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
 const backTesting = require('./backTesting');
 const { waves, wavesBackTesting } = require('./wavesStrategy');
-import { setTimeout } from 'timers/promises';
 
 /**
  * History close prices
@@ -222,11 +221,11 @@ const marginBorrow = (currency, quantity) => {
 
 const marginRepay = (currency, quantity) => { //  (currencies[symbol], quantityCurrency[symbol]  -  (fiat, lot)
     return new Promise(async(resolve, reject) => {
-        await binance.mgRepay(currency, quantity, async(error, response) => { //repay usdt
+        await binance.mgRepay(currency, quantity, (error, response) => { //repay usdt
             if (error) {
                 console.log(`Error marginRepay, persistencia..`);
                 console.error(error.body);
-                await setTimeout((currency, quantity) => {
+                setTimeout((currency, quantity) => {
                     resolve(marginRepay(currency, quantity));
                 }, 3000);
                 // reject(error.body);
