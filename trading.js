@@ -13,6 +13,7 @@ const binance = require('./exchange');
 const util = require('util') // expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
 const backTesting = require('./backTesting');
 const { waves, wavesBackTesting } = require('./wavesStrategy');
+import { setTimeout } from 'timers/promises';
 
 /**
  * History close prices
@@ -61,7 +62,7 @@ const updatedArrayMarkets = async(arrayMarkets, symbol, close) => {
 let quantityCurrency = {};
 const calcQuantity = (symbol, close, lot) => {
     return new Promise((resolve, reject) => {
-        quantity = ((lot - 10) / close); // quantity = ((lot - 3) / close);
+        quantity = lot / close; // quantity = ((lot - 3) / close);
         let pEntera = Math.floor(quantity);
         let resQuantityNro;
         if (pEntera > 0) {
@@ -108,7 +109,7 @@ const testCalcQuantity = () => {
 // testCalcQuantity();
 
 // let currencies = { "BTCUSDT": "BTC", "ETHUSDT": "ETH", "ADAUSDT": "ADA", "BNBUSDT": "BNB", "DOGEUSDT": "DOGE", "ETCUSDT": "ETC", "BCHUSDT": "BCH", "LINKUSDT": "LINK", "VETUSDT": "VET", "SOLUSDT": "SOL", "TRXUSDT": "TRX", "IOTAUSDT": "IOTA" };
-let currencies = { "USDT": "USDT", "BNBUSDT": "BNB", "BTCUSDT": "BTC", "ETHUSDT": "ETH", "ADAUSDT": "ADA" };
+let currencies = { "USDT": "USDT", "BNBUSDT": "BNB", "BTCUSDT": "BTC" };
 const buildNameCurrency = (markets) => {
     markets.forEach((curr, idx, market) => {
         // flagStartMarkets[`${curr}`] = true;
@@ -130,18 +131,24 @@ let detailMarginAccount = {};
 const detailAccount = () => {
     return new Promise(async(resolve, reject) => {
         console.log(`- Loading detail margin account...`);
-        for (let currency in currencies) {
+        try {
             await binance.mgAccount((error, response) => {
                 if (error) return console.warn(error);
-                let account = response.userAssets.find((curr, idx, src) => {
-                    if (currencies[currency] == curr.asset) {
-                        return curr;
+                let account = response.userAssets.filter(curr => { // account: no es usado
+                    for (let currency in currencies) {
+                        if (currencies[currency] == curr.asset) {
+                            detailMarginAccount[currency] = curr;
+                            // return true;
+                        };
                     };
+                    // return false;
                 });
-                detailMarginAccount[currency] = account;
+                resolve(detailMarginAccount);
             });
+        } catch (error) {
+            console.log(error.body);
+            reject(error.body);
         };
-        resolve("SUCCES");
     });
 };
 
@@ -149,224 +156,291 @@ const detailAccount = () => {
 // modifica el objeto detailMarginAccount, agregandole el freeUsdt y borrowedUsdt.
 // freeUsdt: es la propiedad free (balance libre/disponible), pero convertido en usdt.
 // borrowedUsdt: es la propiedad borrowed (prestado), pero convertido en usdt.
-const positionCalculator = fiat => {
+const positionCalculator = (fiat, resOne) => {
     return new Promise(async(resolve, reject) => {
         console.log(`- Loading current margin positions...`);
-        for (let currency in detailMarginAccount) {
-            // console.log(currency); // par-symbol
-            // console.log(currencies[currency]); // moneda
-            if (currencies[currency] != fiat) {
-                let ticker = await binance.prices(currency);
-                let positionValue = detailMarginAccount[currency]["free"] * ticker[currency];
-                detailMarginAccount[currency].freeUsdt = positionValue;
-
-                let borrowedValue = detailMarginAccount[currency]["borrowed"] * ticker[currency];
-                detailMarginAccount[currency].borrowedUsdt = borrowedValue;
-            };
-        };
-        resolve("SUCCES");
-    });
-};
-
-
-const flagSide = fiat => {
-    return new Promise(async(resolve, reject) => {
-        console.log(`- Calculate flagSide..`);
-        for (let currency in detailMarginAccount) {
-            // console.log(currency); // par-symbol
-            // console.log(currencies[currency]); // moneda
-            if (currencies[currency] != fiat && currencies[currency] != "BNB") {
-
-                if (detailMarginAccount[fiat]["borrowed"] > 0 && detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[currency]["borrowedUsdt"] < 10.00) { // tengo posicion largo
-                    detailMarginAccount[currency].currentSideMargin = "long";
-                } else if (detailMarginAccount[currency]["freeUsdt"] < 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 0) { // tengo posicion corto
-                    detailMarginAccount[currency].currentSideMargin = "short";
-                } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 0) {
-                    // shortFail
-                    console.log(`*** flagSide, shortFail: zeroPosition..`);
-                    await zeroPosition(fiat);
-                    detailMarginAccount[currency].currentSideMargin = null;
-                } else {
-                    detailMarginAccount[currency].currentSideMargin = null;
+        try {
+            for (let currency in resOne) {
+                // console.log(currency); // par-symbol
+                // console.log(currencies[currency]); // moneda
+                if (currencies[currency] != fiat) {
+                    let ticket = await binance.prices(currency);
+                    detailMarginAccount[currency].freeUsdt = detailMarginAccount[currency]["free"] * ticket[currency];
+                    detailMarginAccount[currency].borrowedUsdt = detailMarginAccount[currency]["borrowed"] * ticket[currency];
                 };
             };
+            resolve(detailMarginAccount);
+        } catch (error) {
+            console.log(error.body);
+            reject(error.body);
         };
-        resolve("SUCCES");
     });
 };
 
 
-const marginMarketBuy = (symbol, quantity, fiat, lot) => { //quantityCurrency[symbol]
-    return new Promise((resolve, reject) => {
-        binance.mgMarketBuy(symbol, quantity, (error, response) => { // obtenido de la vta: usdt tick[1]["cummulativeQuoteQty"]
-            if (error) { reject(error.body) };
-            detailMarginAccount[symbol]["currentSideMargin"] = "long";
-            detailMarginAccount[symbol]["free"] = +quantity;
-            detailMarginAccount[fiat]["free"] = -lot;
-            console.log(`Margin Market, ${response.side}, ${response.symbol}: ${response.cummulativeQuoteQty}, status: ${response.status}`);
-            resolve(response);
-        });
-    });
-};
-
-const marginMarketSell = (symbol, quantity, fiat, lot) => { //quantityCurrency[symbol]
-    return new Promise((resolve, reject) => {
-        binance.mgMarketSell(symbol, quantity, (error, response) => {
-            if (error) { reject(error.body) };
-            detailMarginAccount[symbol]["currentSideMargin"] = "short";
-            detailMarginAccount[symbol]["free"] = -quantity;
-            detailMarginAccount[fiat]["free"] = +lot;
-            console.log(`Margin Market, ${response.side}, ${response.symbol}: ${response.cummulativeQuoteQty}, status: ${response.status}`);
-            resolve(response);
-        });
-    });
-};
-
-const marginBorrow = (currency, quantity, symbol) => {
-    return new Promise((resolve, reject) => {
-        binance.mgBorrow(currency, quantity, (error, response) => { //borrow usdt y compro btc
+const marginMarketBuy = (symbol, quantity) => { //quantityCurrency[symbol]
+    return new Promise(async(resolve, reject) => {
+        await binance.mgMarketBuy(symbol, quantity, (error, response) => { // obtenido de la vta: usdt tick[1]["cummulativeQuoteQty"]
             if (error) {
-                console.error(error.body);
-                marginBorrow(currency, quantity, symbol);
+                console.log(error.body);
                 reject(error.body);
+            };
+            console.log(`Margin Market, ${response.side}, ${response.symbol}: ${response.cummulativeQuoteQty}, status: ${response.status}`);
+            resolve(response);
+        });
+    });
+};
+
+const marginMarketSell = (symbol, quantity) => { //quantityCurrency[symbol]
+    return new Promise(async(resolve, reject) => {
+        await binance.mgMarketSell(symbol, quantity, (error, response) => {
+            if (error) {
+                console.log(error.body);
+                reject(error.body);
+            };
+            console.log(`Margin Market, ${response.side}, ${response.symbol}: ${response.cummulativeQuoteQty}, status: ${response.status}`);
+            resolve(response);
+        });
+    });
+};
+
+
+const marginBorrow = (currency, quantity) => {
+    return new Promise(async(resolve, reject) => {
+        await binance.mgBorrow(currency, quantity, (error, response) => { //borrow usdt y compro btc
+            if (error) {
+                console.log(`Error marginBorrow, persistencia..`);
+                console.error(error.body);
+                setTimeout(marginBorrow, 3000, currency, quantity);
+                // reject(error.body);
             };
             console.log(`BORROW, quantity: ${currency} ${quantity}, Status: SUCCESS`);
-            // console.log(response); //   [Object: null prototype] { tranId: 67414878854, clientTag: '' }
-            if (currency == "USDT") {
-                detailMarginAccount[currency]["borrowed"] = +quantity;
-                detailMarginAccount[currency]["free"] = +quantity;
-            } else {
-                detailMarginAccount[symbol]["borrowed"] = +quantity;
-                detailMarginAccount[symbol]["free"] = +quantity;
-            };
             resolve(response);
         });
     });
 };
 
-const marginRepay = (currency, quantity, symbol) => { //  (currencies[symbol], quantityCurrency[symbol]  -  (fiat, lot)
-    return new Promise((resolve, reject) => {
-        binance.mgRepay(currency, quantity, (error, response) => { //repay usdt
+const marginRepay = (currency, quantity) => { //  (currencies[symbol], quantityCurrency[symbol]  -  (fiat, lot)
+    return new Promise(async(resolve, reject) => {
+        await binance.mgRepay(currency, quantity, async(error, response) => { //repay usdt
             if (error) {
+                console.log(`Error marginRepay, persistencia..`);
                 console.error(error.body);
-                marginRepay(currency, quantity, symbol);
-                reject(error.body);
+                await setTimeout((currency, quantity) => {
+                    resolve(marginRepay(currency, quantity));
+                }, 3000);
+                // reject(error.body);
             };
             console.log(`REPAY, quantity: ${currency} ${quantity}, Status: SUCCESS`); // console.log(response); //   [Object: null prototype] { tranId: 67414878854, clientTag: '' }
-            if (currency == "USDT") {
-                detailMarginAccount[currency]["borrowed"] = -quantity;
-                detailMarginAccount[currency]["free"] = -quantity;
-            } else {
-                detailMarginAccount[symbol]["borrowed"] = -quantity;
-                detailMarginAccount[symbol]["free"] = -quantity;
-            };
             resolve(response);
         });
     });
 };
+const segundo = async() => {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve('paso 2');
+        }, 3000);
+    });
+};
 
+// let currencies = { "USDT": "USDT", "BNBUSDT": "BNB", "BTCUSDT": "BTC", "ETHUSDT": "ETH", "ADAUSDT": "ADA" };
+// detailMarginAccount[currency].currentSideMargin = null;
+// Object.keys(currencies.currency);
 
-const zeroPosition = async(fiat, lot) => {
+const zeroPositionCrypto = fiat => { // symbol optativo
     return new Promise(async(resolve, reject) => {
-        console.log(`- Close all position, zeroPosition: true !`)
-            // console.log(detailMarginAccount); // recordatorio nav. detailMarginAccount.BTCUSDT.freeUsdt
-            // let i = 0;
-        for (let currency in detailMarginAccount) {
-            // i++;
-            // console.log(`paso 1: ${i}`);
-            // console.log(currency); // par-symbol
-            // console.log(currencies[currency]); // moneda
-            if (currencies[currency] != fiat && currencies[currency] != "BNB") {
-                // console.log(detailMarginAccount[currency]["freeUsdt"]);
+        try {
+            for (let currency in detailMarginAccount) {
+                // console.log(currency); // par-symbol
+                // console.log(currencies[currency]); // moneda
+                if (currencies[currency] != fiat && currencies[currency] != "BNB") {
+                    // arrastro posicion: largo || debo usdt
+                    if (detailMarginAccount[fiat]["borrowed"] > 0 && detailMarginAccount[currency]["freeUsdt"] > 10.00) {
+                        console.log(`***Cerrando posicion LONG, devolviendo ${fiat}..`);
+                        const responseSell = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
+                        let minorQty = (responseSell.cummulativeQuoteQty <= detailMarginAccount[fiat]["borrowed"]) ? responseSell.cummulativeQuoteQty : detailMarginAccount[fiat]["borrowed"];
+                        const response = await marginRepay(fiat, minorQty);
+                        resolve("modified");
 
-                // arrastro posicion: largo || debo usdt
-                if (detailMarginAccount[fiat]["borrowed"] > 0 && detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[currency]["borrowedUsdt"] < 10.00) {
-                    console.log(`***Posicion LONG, devolviendo ${fiat}..`);
-                    const responseSell = await marginMarketSell(currency, detailMarginAccount[currency]["free"], fiat, lot);
-                    let minorQty = (responseSell.cummulativeQuoteQty <= detailMarginAccount[fiat]["borrowed"]) ? responseSell.cummulativeQuoteQty : detailMarginAccount[fiat]["borrowed"];
-                    const response = await marginRepay(fiat, detailMarginAccount[fiat]["borrowed"]);
-                    // resolve(resMarginRepay);
+                        // shortFail / no fue posicion short || me prestaron crypto, pero no alcance a vender || debo crypto
+                    } else if (detailMarginAccount[currency]["freeUsdt"] > 0 && detailMarginAccount[currency]["borrowedUsdt"] > 0) {
+                        console.log(`***Shortfail (devolviendo ${currencies[currency]}, sin inicio de short)..`);
+                        let minorQty = (detailMarginAccount[currency]["borrowedUsdt"] <= detailMarginAccount[currency]["freeUsdt"]) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"];
+                        const response = await marginRepay(currencies[currency], minorQty);
+                        resolve("modified");
 
-                    // shortFail / no fue posicion short || me prestaron crypto, pero no alcance a vender || debo crypto
-                } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 10.00) {
-                    console.log(`***Shortfail (devolviendo ${currencies[currency]}, sin inicio de short)..`);
-                    let minorQty = (detailMarginAccount[currency]["freeUsdt"] <= detailMarginAccount[currency]["borrowedUsdt"]) ? detailMarginAccount[currency]["free"] : detailMarginAccount[currency]["borrowed"];
-                    const response = await marginRepay(currencies[currency], detailMarginAccount[currency]["free"]);
-                    // resolve(resMarginRepay);
+                        // arrastro posicion: corto || debo crypto
+                    } else if (detailMarginAccount[currency]["freeUsdt"] < 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 10.00) {
+                        console.log(`***Cerrando posicion SHORT, devolviendo ${currencies[currency]}..`);
+                        const resMarginMarketBuy = await marginMarketBuy(currency, detailMarginAccount[currency]["borrowed"]);
+                        const response = await marginRepay(currencies[currency], detailMarginAccount[currency]["borrowed"]);
+                        resolve("modified");
 
-                    // arrastro posicion: corto || debo crypto
-                } else if (detailMarginAccount[currency]["freeUsdt"] < 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 10.00) {
-                    console.log(`***Cerrando posicion SHORT, devolviendo ${currencies[currency]}..`);
-                    const resMarginMarketBuy = await marginMarketBuy(currency, detailMarginAccount[currency]["borrowed"], fiat, lot);
-                    const response = await marginRepay(currencies[currency], detailMarginAccount[currency]["borrowed"], symbol);
-                    // resolve(resMarginRepay);
-
-                    // quedo crypto rezagado
-                } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[fiat]["borrowed"] == 0) {
-                    console.log(`...`);
-                    const response = await marginMarketSell(currency, detailMarginAccount[currency]["free"], fiat, lot);
-                    // resolve(resMarginMarketSell);
+                        // quedo crypto rezagado
+                    } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[fiat]["borrowed"] == 0) {
+                        console.log(`...`);
+                        const response = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
+                        resolve("modified");
+                    } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[fiat]["borrowed"] == 0) {
+                        console.log(`***Cerrando posicion LONG (pero sin apalancamiento), NO debo ${fiat}..`);
+                        const responseSell = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
+                        resolve("modified");
+                    } else {
+                        resolve("success");
+                    };
                 };
             };
+        } catch (error) {
+            console.log(error);
+            reject(error);
         };
-        // console.log(`paso 2: ${i}`);
-        console.log(`- Close all position, zeroPositionColector: true !`)
-        if (detailMarginAccount[fiat]["borrowed"] > 0) { // no fue largo || me prestaron usdt, pero no alcance a comprar
-            console.log(`***Longfail (devolviendo ${fiat}, sin inicio de LONG)..`);
-            const response = await marginRepay(fiat, detailMarginAccount[fiat]["borrowed"]);
+    });
+};
+
+const zeroPositionFiat = fiat => {
+    return new Promise(async(resolve, reject) => {
+        try {
+            // quedo fiat rezagado
+            if (detailMarginAccount[fiat]["borrowed"] > 0) { // no fue largo || me prestaron usdt, pero no alcance a comprar
+                console.log(`***zeroPositionFiat, devolviendo ${fiat}..`);
+                const response = await marginRepay(fiat, detailMarginAccount[fiat]["borrowed"]);
+                resolve("modified");
+            } else {
+                resolve("success");
+            };
+        } catch (error) {
+            console.log(error.body);
+            reject(error.body);
         };
-        resolve(response);
+    });
+};
+
+const zeroPositionAll = fiat => {
+    return new Promise(async(resolve, reject) => {
+        try {
+            console.log(`- Close all position, zeroPositionAll: true !`);
+            const resZeroPositionCrypto = await zeroPositionCrypto(fiat);
+            const resZeroPositionFiat = await zeroPositionFiat(fiat);
+            resZeroPositionCrypto == "modified" || resZeroPositionFiat == "modified" ? resolve("modified") : resolve("success");
+        } catch (error) {
+            console.log(error);
+            reject(error);
+        };
+    });
+};
+
+
+const flagSide = (fiat, resTwo) => { // currency = symbol/par
+    return new Promise(async(resolve, reject) => {
+        console.log(`- Calculate flagSide...`);
+        try {
+            // console.log(currency); // par-symbol
+            // console.log(currencies[currency]); // moneda
+            for (let currency in resTwo) { // currency = symbol
+                if (currencies[currency] != fiat) {
+                    // tengo posicion: long
+                    if (detailMarginAccount[fiat]["borrowed"] > 10.00 && detailMarginAccount[currency]["freeUsdt"] > 10.00) {
+                        // if (detailMarginAccount[fiat]["borrowed"] > 10.00 && detailMarginAccount[currency]["freeUsdt"] < 10.00) = // tengo longFail / no fue posicion long || me prestaron fiat, pero no alcance a comprar || debo fiat (no se puede validar cuando hay multiples mercados)
+                        detailMarginAccount[currency].currentSideMargin = "long";
+                        console.log(`*** flagSide: long`);
+                        resolve(detailMarginAccount);
+
+                        // tengo posicion: short
+                    } else if (detailMarginAccount[currency]["freeUsdt"] < 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 10.00) {
+                        detailMarginAccount[currency].currentSideMargin = "short";
+                        console.log(`*** flagSide: short`);
+                        resolve(detailMarginAccount);
+
+                        // tengo shortFail / no fue posicion short || me prestaron crypto, pero no alcance a vender || debo crypto
+                    } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 10.00) {
+                        console.log(`*** flagSide(1er else if), ${detailMarginAccount[currency]["freeUsdt"]}, ${detailMarginAccount[currency]["borrowedUsdt"]}`);
+                        let minorQty = (detailMarginAccount[currency]["borrowedUsdt"] <= detailMarginAccount[currency]["freeUsdt"]) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"];
+                        const response = await marginRepay(currencies[currency], minorQty);
+                        detailMarginAccount[currency].currentSideMargin = null;
+                        resolve(detailMarginAccount);
+
+                    } else {
+                        console.log(`*** flagSide(2do else)`); // en cero entra aqui
+                        detailMarginAccount[currency].currentSideMargin = null;
+                        resolve(detailMarginAccount);
+
+                    };
+                };
+            };
+        } catch (error) {
+            console.log(error.body);
+            reject(error.body);
+        };
+    });
+};
+
+const detailMarginAcc = fiat => {
+    return new Promise(async(resolve, reject) => {
+        try {
+            let resOne = await detailAccount(fiat);
+            let resTwo = await positionCalculator(fiat, resOne);
+            let resThree = await flagSide(fiat, resTwo); // currency = symbol/par || calcula si es long/short/null y lo agrega al detailMarginAccount
+            resolve(resThree);
+        } catch (error) {
+            console.log(error.body);
+            reject(error.body);
+        };
     });
 };
 
 
 let operation = 0;
-const order = (flagOp, symbol, close, lot, fiat) => {
+const order = (signal, symbol, close, lot, fiat) => {
     return new Promise(async(resolve, reject) => {
-        if (flagOp != undefined && detailMarginAccount[symbol]["currentSideMargin"] == null) {
-            // await detailAccount(currencies[symbol], binance);
-            // currency = currencies[symbol];
-            // quantity = quantityCurrency[symbol];
-            let quantity = await calcQuantity(symbol, close, lot);
-            if (flagOp == 'buy') { // 1er operacion: prestamo usdt y long
-                operation++;
-                console.log(`----------------------------INIT OPEN LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
-                await marginBorrow(fiat, lot, symbol);
-                await marginMarketBuy(symbol, quantity, fiat, lot); // quantity = quantityCurrency[symbol]
-                console.log(`----------------------------INIT OPEN LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
-                resolve("SUCCES");
-            } else if (flagOp == 'sell') { // 1er operacion: prestamo crypto y short
-                operation++;
-                console.log(`----------------------------INIT OPEN SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
-                await marginBorrow(currencies[symbol], quantity, symbol); // quantity = quantityCurrency[symbol]
-                await marginMarketSell(symbol, quantity, fiat, lot);
-                console.log(`----------------------------INIT OPEN SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
-                resolve("SUCCES");
-            };
-        } else if (flagOp != undefined && detailMarginAccount[symbol]["currentSideMargin"] != null) {
-            let quantity = await calcQuantity(symbol, close, lot);
-            if (flagOp == 'buy' && detailMarginAccount[symbol]["currentSideMargin"] == "short") { // arrastro un short
-                operation++;
-                console.log(`----------------------------CLOSE SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
-                await marginMarketBuy(symbol, quantity, fiat, lot);
-                await marginRepay(currencies[symbol], quantity, symbol);
-                quantity = await calcQuantity(symbol, close, lot);
-                await marginBorrow(fiat, lot);
-                await marginMarketBuy(symbol, quantity, fiat, lot);
-                console.log(`----------------------------OPEN LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
-                resolve("SUCCES");
+        try {
+            if (signal != undefined && detailMarginAccount[symbol]["currentSideMargin"] == null) {
+                // currency = currencies[symbol];
+                // quantity = quantityCurrency[symbol];
+                let quantity = await calcQuantity(symbol, close, lot);
+                if (signal == 'buy') { // 1er operacion: prestamo usdt y long
+                    operation++;
+                    console.log(`----------------------------INIT OPEN LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
+                    await marginBorrow(fiat, lot);
+                    await marginMarketBuy(symbol, quantity); // quantity = quantityCurrency[symbol]
+                    console.log(`----------------------------INIT OPEN LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
+                    resolve("SUCCESS");
+                } else if (signal == 'sell') { // 1er operacion: prestamo crypto y short
+                    operation++;
+                    console.log(`----------------------------INIT OPEN SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
+                    await marginBorrow(currencies[symbol], quantity); // quantity = quantityCurrency[symbol]
+                    await marginMarketSell(symbol, quantity);
+                    console.log(`----------------------------INIT OPEN SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
+                    resolve("SUCCESS");
+                };
+            } else if (signal != undefined && detailMarginAccount[symbol]["currentSideMargin"] != null) {
+                let quantity = await calcQuantity(symbol, close, lot);
+                if (signal == 'buy' && detailMarginAccount[symbol]["currentSideMargin"] == "short") { // arrastro un short
+                    operation++;
+                    console.log(`----------------------------CLOSE SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
+                    await marginMarketBuy(symbol, quantity);
+                    await marginRepay(currencies[symbol], quantity);
+                    quantity = await calcQuantity(symbol, close, lot);
+                    await marginBorrow(fiat, lot);
+                    await marginMarketBuy(symbol, quantity);
+                    console.log(`----------------------------OPEN LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
+                    resolve("SUCCESS");
 
-            } else if (flagOp == 'sell' && detailMarginAccount[symbol]["currentSideMargin"] == "long") { // arrastro un long
-                operation++;
-                console.log(`----------------------------CLOSE LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
-                await marginMarketSell(symbol, quantity, fiat, lot);
-                await marginRepay(fiat, lot);
-                quantity = await calcQuantity(symbol, close, lot);
-                await marginBorrow(currencies[symbol], quantity, symbol);
-                await marginMarketSell(symbol, quantity, fiat, lot);
-                console.log(`----------------------------OPEN SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
-                resolve("SUCCES");
+                } else if (signal == 'sell' && detailMarginAccount[symbol]["currentSideMargin"] == "long") { // arrastro un long
+                    operation++;
+                    console.log(`----------------------------CLOSE LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
+                    await marginMarketSell(symbol, quantity);
+                    await marginRepay(fiat, lot);
+                    quantity = await calcQuantity(symbol, close, lot);
+                    await marginBorrow(currencies[symbol], quantity);
+                    await marginMarketSell(symbol, quantity);
+                    console.log(`----------------------------OPEN SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
+                    resolve("SUCCESS");
+                };
             };
+        } catch (error) {
+            console.log(error.body);
+            reject(error);
         };
     });
 };
@@ -378,14 +452,14 @@ const trading = (async _ => {
         // const markets = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "DOGEUSDT", "ETCUSDT", "BCHUSDT", "LINKUSDT", "VETUSDT", "SOLUSDT", "TRXUSDT", "IOTAUSDT"];
         // const markets = ["BTCUSDT", "ETHUSDT", "ADAUSDT"];
         let markets = ["BTCUSDT"];
-        let timeFrame = "15m";
+        let timeFrame = "1m";
         let fiat = "USDT";
-        let lot = 1000.00; // valor lote, default = 100usd
+        let lot = 15.00; // valor lote, default = 100usd
         let length = 7;
-        let operation = 0;
 
         console.log("***Condor Trader-Bot Binance*** \n");
-        console.log(`TimeFrame: ${timeFrame} | Lot Usdt: ${lot} | Capital inicial:     \n`);
+        console.log(`TimeFrame: ${timeFrame} | Lot Usdt: ${lot} | Capital inicial:  258.96   \n`);
+        console.log(`En desarrollo, controlar: keys, wavesStrategy, markets/timeFrame/lot, calcQuantity, closeAllPosition   \n`);
         console.log(`Markets: ${markets} \n`);
 
         // let [, arrayclose] = arrayMarkets[0];
@@ -393,36 +467,31 @@ const trading = (async _ => {
         // let dataBackTesting = wavesBackTesting(arrayclose, length); //<==
         // backTesting(dataBackTesting); //<==  
 
-        await detailAccount();
-
         let historyMarketsCloses = historyCloses(markets, timeFrame, binance);
-
         let arrayMarkets = await historyMarketsCloses().then(value => {
             console.log(`- Loading candlesticks history...`);
             return value;
         });
 
+        // await marginMarketSell("BTCUSDT", 0.000449); // quantity = quantityCurrency[symbol]
         // await marginBorrow("ETH", 0.0079, "ETHUSDT"); // quantity = quantityCurrency[symbol]
         // await marginMarketSell("ETHUSDT", 0.008, fiat, lot); // quantity = quantityCurrency[symbol]
 
-        await positionCalculator(fiat); // calcula freeUsdt/borrowedUsdt y lo agrega al detailMarginAccount
-
-        console.log(`- Requirements loaded !!`);
+        await detailMarginAcc(fiat);
 
         let closeAllPosition = true; // default false
         if (closeAllPosition == true) {
-            await zeroPosition(fiat);
+            let resZeroPositionAll = await zeroPositionAll(fiat);
+            if (resZeroPositionAll == "modified") {
+                await detailMarginAcc(fiat);
+            };
         };
 
-        await flagSide(fiat); // calcula si es long/short/null y lo agrega al detailMarginAccount
 
         console.log(`- Waiting for signal every: ${timeFrame}... \n`);
 
-        // console.log(detailMarginAccount)
-        // console.log(currencies["USDT"]);
-        // console.log(detailMarginAccount["ETHUSDT"]["freeUsdt"]);
-        // console.log(detailMarginAccount["ETHUSDT"]["currentSideMargin"]);
-        // console.log(detailMarginAccount); // recordatorio nav detailMarginAccount.BTCUSDT.freeUsdt
+        console.log(detailMarginAccount.USDT);
+        console.log(detailMarginAccount.BTCUSDT); // recordatorio nav detailMarginAccount.BTCUSDT.freeUsdt
 
         await binance.websockets.candlesticks(markets, timeFrame, async(candlesticks) => {
             let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlesticks;
@@ -432,11 +501,16 @@ const trading = (async _ => {
 
                 let updatedMarkets = await updatedArrayMarkets(arrayMarkets, symbol, close);
 
-                let flagOp = await waves(updatedMarkets, length); //<== aqui recibe las senales de la estrategia
-                // let flagOp = 'sell';
-                // let flagOp = 'undefined';
+                let signal = await waves(updatedMarkets, length); //<== aqui recibe las senales de la estrategia
+                // let signal = 'sell';
+                // let signal = 'undefined';
 
-                await order(flagOp, symbol, close, lot, fiat);
+                if (signal != undefined) {
+                    await order(signal, symbol, close, lot, fiat);
+                    await detailMarginAcc(fiat);
+                    console.log(detailMarginAccount.USDT);
+                    console.log(detailMarginAccount.BTCUSDT);
+                };
 
             };
         });
