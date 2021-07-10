@@ -4,65 +4,82 @@ const { prevPrice, percent } = require('./indicator/utils');
 const { waves, wavesBackTesting } = require('./wavesStrategy');
 
 //=================== Back-Testing ===================
-// let buy = 0;
-// let sell = 0;
-// let flagSell = false;
-// let flagBuy = false;
-// let objectOperation = new Object();
 
-let profit = 0;
-let profitParcial = 0;
-let parcialPercent;
-let totalPercent = 0;
-let percentFee = 0.1;
-
-//si el profit parcial es negativo, entonces el fee debe sumarse, arreglar!
+//listo!!! si el profit parcial es negativo, entonces el fee debe sumarse, arreglar!
 const backTesting = (src) => {
-    // let symbol = "BTCUSDT";
-    // let timeFrame = "4h";
-    // let length = 7;
-    // let arrayClose = new Array;
+    let profit = 0;
+    let profitParcial = 0;
+    let parcialPercent;
+    let totalPercent = 0;
+    let percentFee = 0.1;
+    let winners = 0;
+    let losers = 0;
+    let result;
 
     let arrayOperation = Object.entries(src);
-    console.log(arrayOperation);
+    // console.log(arrayOperation);
+
+    console.log("||-------------------------------------------------------||");
+    console.log("||---------------------BACKTESTING!!---------------------||");
+    console.log("||-------------------------------------------------------||");
 
     arrayOperation.forEach((operation, ix, arrayOperation) => {
-        if (operation[0].includes('Buy') && prevPrice(ix, arrayOperation) != 0) {
-            fee = percent(arrayOperation[ix][1], percentFee);
-            profitParcial = (prevPrice(ix, arrayOperation) - arrayOperation[ix][1]) - fee;
+        let previousPrice = prevPrice(ix, arrayOperation);
+        let currentPrice = arrayOperation[ix][1];
+
+        if (operation[0].includes('Buy') && previousPrice != 0) {
+            fee = percent(currentPrice, percentFee);
+            profitParcial = (previousPrice - currentPrice) - fee;
             profit += profitParcial;
-            parcialPercent = ((100 - ((arrayOperation[ix][1] / prevPrice(ix, arrayOperation)) * 100))) - percentFee;
+            parcialPercent = ((100 - ((currentPrice / previousPrice) * 100))) - percentFee;
             totalPercent += parcialPercent;
-            console.log("-----------------------------------------------------------");
-            console.log(`ix: ${ix}`);
-            console.log("Buy (Iniciando long/cerrando short): " + arrayOperation[ix][0]);
+            if (Math.sign(profitParcial) == 1) {
+                winners += 1;
+                result = 'WINNER';
+            } else if (Math.sign(profitParcial) == -1) {
+                losers += 1;
+                result = 'LOSER';
+            };
+
+            console.log(`ix: ${ix} || ${result} || Winners: ${winners}, Losers: ${losers}`);
+            console.log("Buy (Cerrando short/Iniciando long): " + arrayOperation[ix][0]);
+            console.log(`Winners: ${winners}, Losers: ${losers}`);
+            console.log(`Venta: ${previousPrice}, Compra: ${currentPrice}. Fee: ${fee}`);
             console.log(`Profit parcial: ${profitParcial}`);
             console.log(`Profit Total: ${profit}`);
             console.log(`% Parcial: ${parcialPercent}`);
             console.log(`% Total: ${totalPercent}`);
-        } else if (operation[0].includes('Sell') && prevPrice(ix, arrayOperation) != 0) {
-            fee = percent(arrayOperation[ix][1], percentFee);
-            profitParcial = (arrayOperation[ix][1] - prevPrice(ix, arrayOperation)) - fee;
-            profit += profitParcial;
-            parcialPercent = (((arrayOperation[ix][1] / prevPrice(ix, arrayOperation)) * 100) - 100) - percentFee;
-            totalPercent += parcialPercent;
             console.log("-----------------------------------------------------------");
-            console.log(`ix: ${ix}`);
-            console.log("Sell (Iniciando short/cerrando long): " + arrayOperation[ix][0]);
+
+
+        } else if (operation[0].includes('Sell') && previousPrice != 0) {
+            fee = percent(currentPrice, percentFee);
+            profitParcial = (currentPrice - previousPrice) - fee;
+            profit += profitParcial;
+            parcialPercent = (((currentPrice / previousPrice) * 100) - 100) - percentFee;
+            totalPercent += parcialPercent;
+            if (Math.sign(profitParcial) == 1) {
+                winners += 1;
+                result = 'WINNER';
+            } else if (Math.sign(profitParcial) == -1) {
+                losers += 1;
+                result = 'LOSER';
+            };
+
+            console.log(`ix: ${ix} || ${result} || Winners: ${winners}, Losers: ${losers}`);
+            console.log("Sell (Cerrando long/Iniciando short): " + arrayOperation[ix][0]);
+            console.log(`Compra: ${previousPrice}, Venta: ${currentPrice}. Fee: ${fee}`);
             console.log(`Profit parcial: ${profitParcial}`);
             console.log(`Profit Total: ${profit}`);
             console.log(`% Parcial: ${parcialPercent}`);
             console.log(`% Total: ${totalPercent}`);
-        } else {
             console.log("-----------------------------------------------------------");
-            console.log(`ix: ${ix}`);
-            console.log(`Fee: ${percentFee}`);
-            console.log(`Profit parcial: ${profitParcial}`);
-            console.log(`Profit Total: ${profit}`);
-            console.log(`% Total: ${totalPercent}`);
+
         };
     });
-
+    console.log("===========================================================");
+    console.log(`Winners: ${winners}, Losers: ${losers}`);
+    console.log("===========================================================");
 };
 
 module.exports = backTesting;

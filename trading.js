@@ -61,7 +61,7 @@ const updatedArrayMarkets = async(arrayMarkets, symbol, close) => {
 let quantityCurrency = {};
 const calcQuantity = (symbol, close, lot) => {
     return new Promise((resolve, reject) => {
-        quantity = lot / close; // quantity = ((lot - 3) / close);
+        quantity = (lot - 3) / close; // quantity = ((lot - 3) / close);
         let pEntera = Math.floor(quantity);
         let resQuantityNro;
         if (pEntera > 0) {
@@ -94,6 +94,44 @@ const calcQuantity = (symbol, close, lot) => {
         };
         quantityCurrency[`${symbol}`] = resQuantityNro;
         console.log(`***Recalculating quantity: ${symbol} ${resQuantityNro}`);
+        resolve(resQuantityNro);
+    });
+};
+
+const formatQuantity = (quantity) => { // debo agregar un parametro mas, que indicaria que cantidad de digitos debe ser formateada la cifra
+    return new Promise((resolve, reject) => {
+        let pEntera = Math.floor(quantity);
+        let resQuantityNro;
+        if (pEntera > 0) {
+            resQuantityNro = parseFloat(quantity.toFixed(2));
+        } else {
+            let flagFloat = false;
+            let flagZero = true;
+            let flagFirstDig = false;
+            let flagSecondDig = false;
+            let quantityArr = quantity.toString().split('');
+            let resQuantityArr = quantityArr.filter((curr, idx, src) => {
+                if (flagFloat == false && curr != ".") {
+                    return curr;
+                } else if (flagZero == true && curr == ".") {
+                    flagFloat = true;
+                    flagZero = false;
+                    return curr;
+                } else if (flagZero == false && flagFirstDig == false) {
+                    if (curr > 0) {
+                        flagFirstDig = true;
+                    };
+                    return curr;
+                } else if (flagFirstDig == true && flagSecondDig == false) {
+                    flagSecondDig = true;
+                    return curr;
+                };
+            });
+            let resQuantityStr = resQuantityArr.join('');
+            resQuantityNro = parseFloat(resQuantityStr);
+        };
+        // quantityCurrency[`${symbol}`] = resQuantityNro;
+        console.log(`***Formating quantity:  ${resQuantityNro}`);
         resolve(resQuantityNro);
     });
 };
@@ -210,7 +248,9 @@ const marginBorrow = (currency, quantity) => {
             if (error) {
                 console.log(`Error marginBorrow, persistencia..`);
                 console.error(error.body);
-                setTimeout(marginBorrow, 3000, currency, quantity);
+                setTimeout((currency, quantity) => {
+                    resolve(marginBorrow(currency, quantity));
+                }, 3000);
                 // reject(error.body);
             };
             console.log(`BORROW, quantity: ${currency} ${quantity}, Status: SUCCESS`);
@@ -251,39 +291,47 @@ const zeroPositionCrypto = fiat => { // symbol optativo
     return new Promise(async(resolve, reject) => {
         try {
             for (let currency in detailMarginAccount) {
+                let borrowedFiat = detailMarginAccount[fiat]["borrowed"]; // prestamo de usdt
+                let borrowedCrypto = detailMarginAccount[currency]["borrowedUsdt"] // prestamo de crypto en usdt
+                let freeUsdtCrypto = detailMarginAccount[currency]["freeUsdt"]; // balance disponible de crypto en usdt
+                let freeCrypto = detailMarginAccount[currency]["free"]; // balance disponible en crypto
+                let borrowedCryptoToCrypto = detailMarginAccount[currency]["borrowed"]; // restamo de crypto en crypto
+
                 // console.log(currency); // par-symbol
                 // console.log(currencies[currency]); // moneda
                 if (currencies[currency] != fiat && currencies[currency] != "BNB") {
                     // arrastro posicion: largo || debo usdt
-                    if (detailMarginAccount[fiat]["borrowed"] > 0 && detailMarginAccount[currency]["freeUsdt"] > 10.00) {
+                    if (borrowedFiat > 0 && freeUsdtCrypto > 10.00) {
                         console.log(`***Cerrando posicion LONG, devolviendo ${fiat}..`);
-                        const responseSell = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
-                        let minorQty = (responseSell.cummulativeQuoteQty <= detailMarginAccount[fiat]["borrowed"]) ? responseSell.cummulativeQuoteQty : detailMarginAccount[fiat]["borrowed"];
+                        const responseSell = await marginMarketSell(currency, freeCrypto);
+                        let minorQty = (responseSell.cummulativeQuoteQty <= borrowedFiat) ? responseSell.cummulativeQuoteQty : borrowedFiat;
                         const response = await marginRepay(fiat, minorQty);
                         resolve("modified");
 
                         // shortFail / no fue posicion short || me prestaron crypto, pero no alcance a vender || debo crypto
-                    } else if (detailMarginAccount[currency]["freeUsdt"] > 0 && detailMarginAccount[currency]["borrowedUsdt"] > 0) {
+                    } else if (freeUsdtCrypto > 0 && borrowedCrypto > 0) {
                         console.log(`***Shortfail (devolviendo ${currencies[currency]}, sin inicio de short)..`);
-                        let minorQty = (detailMarginAccount[currency]["borrowedUsdt"] <= detailMarginAccount[currency]["freeUsdt"]) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"];
+                        let minorQty = (borrowedCrypto <= freeUsdtCrypto) ? borrowedCryptoToCrypto : freeCrypto;
                         const response = await marginRepay(currencies[currency], minorQty);
                         resolve("modified");
 
                         // arrastro posicion: corto || debo crypto
-                    } else if (detailMarginAccount[currency]["freeUsdt"] < 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 10.00) {
+                    } else if (freeUsdtCrypto < 10.00 && borrowedCrypto > 10.00) {
                         console.log(`***Cerrando posicion SHORT, devolviendo ${currencies[currency]}..`);
-                        const resMarginMarketBuy = await marginMarketBuy(currency, detailMarginAccount[currency]["borrowed"]);
-                        const response = await marginRepay(currencies[currency], detailMarginAccount[currency]["borrowed"]);
+                        const resMarginMarketBuy = await marginMarketBuy(currency, borrowedCryptoToCrypto);
+                        const response = await marginRepay(currencies[currency], borrowedCryptoToCrypto);
                         resolve("modified");
 
                         // quedo crypto rezagado
-                    } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[fiat]["borrowed"] == 0) {
+                    } else if (freeUsdtCrypto > 10.00 && borrowedFiat == 0) {
                         console.log(`...`);
-                        const response = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
+                        const response = await marginMarketSell(currency, freeCrypto);
                         resolve("modified");
-                    } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[fiat]["borrowed"] == 0) {
+
+                        // tengo cripto comprado, pero sin apalancamiento
+                    } else if (freeUsdtCrypto > 10.00 && borrowedFiat == 0) {
                         console.log(`***Cerrando posicion LONG (pero sin apalancamiento), NO debo ${fiat}..`);
-                        const responseSell = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
+                        const responseSell = await marginMarketSell(currency, freeCrypto);
                         resolve("modified");
                     } else {
                         resolve("success");
@@ -338,33 +386,80 @@ const flagSide = (fiat, resTwo) => { // currency = symbol/par
             // console.log(currencies[currency]); // moneda
             for (let currency in resTwo) { // currency = symbol
                 if (currencies[currency] != fiat) {
+                    let borrowedFiat = detailMarginAccount[fiat]["borrowed"]; // prestamo de usdt
+                    let borrowedCrypto = detailMarginAccount[currency]["borrowedUsdt"] // prestamo de crypto
+                    let freeUsdtCrypto = detailMarginAccount[currency]["freeUsdt"]; // balance disponible de crypto en usdt
+
                     // tengo posicion: long
-                    if (detailMarginAccount[fiat]["borrowed"] > 10.00 && detailMarginAccount[currency]["freeUsdt"] > 10.00) {
+                    if (borrowedFiat > 10.00 && freeUsdtCrypto > 10.00) {
                         // if (detailMarginAccount[fiat]["borrowed"] > 10.00 && detailMarginAccount[currency]["freeUsdt"] < 10.00) = // tengo longFail / no fue posicion long || me prestaron fiat, pero no alcance a comprar || debo fiat (no se puede validar cuando hay multiples mercados)
                         detailMarginAccount[currency].currentSideMargin = "long";
                         console.log(`*** flagSide: long`);
                         resolve(detailMarginAccount);
 
                         // tengo posicion: short
-                    } else if (detailMarginAccount[currency]["freeUsdt"] < 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 10.00) {
+                    } else if (borrowedCrypto > 10.00 && freeUsdtCrypto < 10.00) {
                         detailMarginAccount[currency].currentSideMargin = "short";
                         console.log(`*** flagSide: short`);
                         resolve(detailMarginAccount);
 
                         // tengo shortFail / no fue posicion short || me prestaron crypto, pero no alcance a vender || debo crypto
-                    } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 10.00) {
-                        console.log(`*** flagSide(1er else if), ${detailMarginAccount[currency]["freeUsdt"]}, ${detailMarginAccount[currency]["borrowedUsdt"]}`);
-                        let minorQty = (detailMarginAccount[currency]["borrowedUsdt"] <= detailMarginAccount[currency]["freeUsdt"]) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"];
+                    } else if (borrowedCrypto > 10.00 && freeUsdtCrypto > 10.00) {
+                        console.log(`*** flagSide: null, shortFail(1er else if), ${freeUsdtCrypto}, ${borrowedCrypto}`);
+                        let minorQty = (borrowedCrypto <= freeUsdtCrypto) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"];
                         const response = await marginRepay(currencies[currency], minorQty);
                         detailMarginAccount[currency].currentSideMargin = null;
                         resolve(detailMarginAccount);
 
+                        // tengo fail / tengo crypto, pero sin prestamo de fiat ni de crypto
+                    } else if (borrowedFiat < 10.00 && borrowedCrypto < 10.00 && freeUsdtCrypto > 10.00) {
+                        console.log(`*** flagSide: null, fail(2do else if), ${detailMarginAccount[currency]["freeUsdt"]}, ${detailMarginAccount[fiat]["borrowed"]}`);
+                        const response = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
+                        detailMarginAccount[currency].currentSideMargin = null;
+                        resolve(detailMarginAccount);
+
                     } else {
-                        console.log(`*** flagSide(2do else)`); // en cero entra aqui
+                        console.log(`*** flagSide: null, (3er else)`); // en cero entra aqui
                         detailMarginAccount[currency].currentSideMargin = null;
                         resolve(detailMarginAccount);
 
                     };
+                    // Validaciones aprobadas:
+                    // (freeUsdtCrypto > 10.00 && borrowedFiat > 10.00) V long
+                    // (freeUsdtCrypto < 10.00 && borrowedCrypto > 10.00) V short
+                    // (borrowedCrypto > 10.00 && freeUsdtCrypto > 10.00) V shortFail: me prestaron, pero no vendi. Debo hacer repayCrypto
+                    // (borrowedFiat   > 10.00 && freeUsdtCrypto < 10.00) V fail: prestaron fiat, pero no se compro la posicion, de donde salio el crypto?. se soluciona agreagrando una validacion mas, (borrowedFiat < 10.00 && borrowedCrypto < 10.00 && freeUsdtCrypto > 10.00)
+
+                    // Todas posibles validaciones:
+                    // (borrowedFiat > 10.00 && freeUsdtCrypto < 10.00) V longFail: prestaron fiat, pero no se compro la posicion, debo hacer repayFiat
+                    // (borrowedFiat > 10.00 && freeUsdtCrypto > 10.00) V long
+                    // (borrowedFiat < 10.00 && freeUsdtCrypto < 10.00) X null
+                    // (borrowedFiat < 10.00 && freeUsdtCrypto > 10.00) X fail: de donde salio la cripto? de prestamo crypto o de compra sin apalancamiento, falta validacion. Es X por que la voy a validar en freeUsdtCrypto > 10.00 && borrowedCrypto (> 10.00 (shortFail) || < 10.00 (debo validar si sale de borrowedFiat > 10.00))
+
+                    // (borrowedFiat > 10.00 && borrowedCrypto < 10.00) X 
+                    // (borrowedFiat > 10.00 && borrowedCrypto > 10.00) X
+                    // (borrowedFiat < 10.00 && borrowedCrypto < 10.00) X null
+                    // (borrowedFiat < 10.00 && borrowedCrypto > 10.00) X tengo prestamo crypto, deberia validar si se vendio (short), y sino shortFail
+
+                    // (borrowedCrypto > 10.00 && freeUsdtCrypto < 10.00) V short: me prestaron crypto y se vendio
+                    // (borrowedCrypto > 10.00 && freeUsdtCrypto > 10.00) V shortFail: me prestaron, pero no vendi. Debo hacer repayCrypto
+                    // (borrowedCrypto < 10.00 && freeUsdtCrypto < 10.00) X null
+                    // (borrowedCrypto < 10.00 && freeUsdtCrypto > 10.00) X
+
+                    // (borrowedCrypto > 10.00 && borrowedFiat < 10.00) X
+                    // (borrowedCrypto > 10.00 && borrowedFiat > 10.00) X
+                    // (borrowedCrypto < 10.00 && borrowedFiat < 10.00) X null
+                    // (borrowedCrypto < 10.00 && borrowedFiat > 10.00) X 
+
+                    // (freeUsdtCrypto > 10.00 && borrowedCrypto < 10.00) X long: validar si el free es producto de borrowed fiat(long), caso contrario es un buy sin apalancamiento y se debera vender la posicion
+                    // (freeUsdtCrypto > 10.00 && borrowedCrypto > 10.00) V shortFail; me prestaron crypto, pero no vendi la posicion
+                    // (freeUsdtCrypto < 10.00 && borrowedCrypto < 10.00) X null
+                    // (freeUsdtCrypto < 10.00 && borrowedCrypto > 10.00) V short
+
+                    // (freeUsdtCrypto > 10.00 && borrowedFiat < 10.00) X fail: de donde salio la cripto? de prestamo crypto o de compra sin apalancamiento, falta validacion
+                    // (freeUsdtCrypto > 10.00 && borrowedFiat > 10.00) V long
+                    // (freeUsdtCrypto < 10.00 && borrowedFiat < 10.00) X null
+                    // (freeUsdtCrypto < 10.00 && borrowedFiat > 10.00) V longFail: prestaron fiat, pero no se compro la posicion, debo hacer repayFiat
                 };
             };
         } catch (error) {
@@ -450,21 +545,17 @@ const trading = (async _ => {
     try {
         // const markets = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "DOGEUSDT", "ETCUSDT", "BCHUSDT", "LINKUSDT", "VETUSDT", "SOLUSDT", "TRXUSDT", "IOTAUSDT"];
         // const markets = ["BTCUSDT", "ETHUSDT", "ADAUSDT"];
-        let markets = ["BTCUSDT"];
-        let timeFrame = "1m";
+        let markets = ["ETHUSDT"];
+        let timeFrame = "15m";
+        let length = 20;
         let fiat = "USDT";
-        let lot = 15.00; // valor lote, default = 100usd
-        let length = 7;
+        let lot = 100.00; // valor lote, default = 100usd
 
         console.log("***Condor Trader-Bot Binance*** \n");
-        console.log(`TimeFrame: ${timeFrame} | Lot Usdt: ${lot} | Capital inicial:  258.96   \n`);
+        console.log(`TimeFrame: ${timeFrame} | Lot Usdt: ${lot} | Capital inicial:  256.79   \n`);
         console.log(`En desarrollo, controlar: keys, wavesStrategy, markets/timeFrame/lot, calcQuantity, closeAllPosition   \n`);
         console.log(`Markets: ${markets} \n`);
 
-        // let [, arrayclose] = arrayMarkets[0];
-        // console.log(util.inspect(arrayclose, { maxArrayLength: null }));
-        // let dataBackTesting = wavesBackTesting(arrayclose, length); //<==
-        // backTesting(dataBackTesting); //<==  
 
         let historyMarketsCloses = historyCloses(markets, timeFrame, binance);
         let arrayMarkets = await historyMarketsCloses().then(value => {
@@ -472,13 +563,14 @@ const trading = (async _ => {
             return value;
         });
 
+        // await marginMarketBuy("BTCUSDT", 0.001402); // quantity = quantityCurrency[symbol]
         // await marginMarketSell("BTCUSDT", 0.000449); // quantity = quantityCurrency[symbol]
         // await marginBorrow("ETH", 0.0079, "ETHUSDT"); // quantity = quantityCurrency[symbol]
         // await marginMarketSell("ETHUSDT", 0.008, fiat, lot); // quantity = quantityCurrency[symbol]
 
         await detailMarginAcc(fiat);
 
-        let closeAllPosition = true; // default false
+        let closeAllPosition = false; // default false
         if (closeAllPosition == true) {
             let resZeroPositionAll = await zeroPositionAll(fiat);
             if (resZeroPositionAll == "modified") {
@@ -486,11 +578,18 @@ const trading = (async _ => {
             };
         };
 
-
         console.log(`- Waiting for signal every: ${timeFrame}... \n`);
 
-        console.log(detailMarginAccount.USDT);
-        console.log(detailMarginAccount.BTCUSDT); // recordatorio nav detailMarginAccount.BTCUSDT.freeUsdt
+        // console.log(detailMarginAccount.USDT);
+        // console.log(detailMarginAccount.BTCUSDT); // recordatorio nav detailMarginAccount.BTCUSDT.freeUsdt
+
+        let flagBackTesting = true; // default: false
+        if (flagBackTesting == true) {
+            let [, arrayclose] = arrayMarkets[0];
+            // console.log(util.inspect(arrayclose, { maxArrayLength: null }));
+            let dataBackTesting = wavesBackTesting(arrayclose, length); //<==
+            backTesting(dataBackTesting); //<==  
+        };
 
         await binance.websockets.candlesticks(markets, timeFrame, async(candlesticks) => {
             let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlesticks;
@@ -500,9 +599,9 @@ const trading = (async _ => {
 
                 let updatedMarkets = await updatedArrayMarkets(arrayMarkets, symbol, close);
 
-                let signal = await waves(updatedMarkets, length); //<== aqui recibe las senales de la estrategia
+                // let signal = await waves(updatedMarkets, length); //<== aqui recibe las senales de la estrategia
                 // let signal = 'sell';
-                // let signal = 'undefined';
+                let signal = 'undefined';
 
                 if (signal != undefined) {
                     await order(signal, symbol, close, lot, fiat);
