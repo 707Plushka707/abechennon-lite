@@ -1,26 +1,16 @@
 const express = require('express');
 const path = require('path');
-const bodyParser = require('body-parser');
 require('./config/config');
-// const binance = require('./exchange');
-// require('./backTesting');
 require('./trading');
-// require('dotenv').config();
-// if (process.env.NODE_ENV = 'production') {
-//     require('dotenv').config();
-// };
 
-// creando el server
 const app = express();
 
-// parseo de data
 app.use(express.json());
 
 app.get("/", (req, res) => {
-    res.send(`Condor!`);
+    res.send(`Abechennon online!`);
 });
 
-//Lanzando el server
 app.listen(process.env.PORT, () => {
     let response = '- Listening port: ' + process.env.PORT;
     return console.log(response);
@@ -29,9 +19,9 @@ app.listen(process.env.PORT, () => {
 // mongodb+srv://pablob206:<password>@cluster0.fugtn.mongodb.net/test
 
 // parse application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false }));
 // parse application/json
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(express.static(path.resolve(__dirname, '../public')));
 
 module.exports = app;

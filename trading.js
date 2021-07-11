@@ -1,18 +1,37 @@
 /* ============================================================
- * Condor Trader-Bot Binance
- * https://github.com/jaggedsoft/node-binance-api
+ * Abechennon Margin Trader-Bot Binance
+ * https://github.com/pablob206/abechennon-traderbot
  * ============================================================
- * Copyright 2017-, Jon Eyrick
- * Released under the MIT License
+ * 2021 - Pablo Brocal - pablob206@hotmail.com
  * ============================================================
- * @module jaggedsoft/node-binance-api
- * @return {object} instance to class object */
+ */
 const { response } = require('express');
 const Binance = require('node-binance-api');
 const binance = require('./exchange');
-const util = require('util') // expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
+const util = require('util') // console.log(util.inspect(array, { maxArrayLength: null }));
 const backTesting = require('./backTesting');
 const { waves, wavesBackTesting } = require('./wavesStrategy');
+
+const ADX = require('technicalindicators').ADX;
+let period = 14;
+let input = {
+    close: [29.87, 30.24, 30.10, 28.90, 28.92, 28.48, 28.56, 27.56, 28.47, 28.28, 27.49, 27.23, 26.35, 26.33, 27.03, 26.22, 26.01, 25.46, 27.03, 27.45, 28.36, 28.43, 27.95, 29.01, 29.38, 29.36, 28.91, 30.61, 30.05, 30.19, 31.12, 30.54, 29.78, 30.04, 30.49, 31.47, 32.05, 31.97, 31.13, 31.66, 32.64, 32.59, 32.19, 32.10, 32.93, 33.00, 31.94],
+    high: [30.20, 30.28, 30.45, 29.35, 29.35, 29.29, 28.83, 28.73, 28.67, 28.85, 28.64, 27.68, 27.21, 26.87, 27.41, 26.94, 26.52, 26.52, 27.09, 27.69, 28.45, 28.53, 28.67, 29.01, 29.87, 29.80, 29.75, 30.65, 30.60, 30.76, 31.17, 30.89, 30.04, 30.66, 30.60, 31.97, 32.10, 32.03, 31.63, 31.85, 32.71, 32.76, 32.58, 32.13, 33.12, 33.19, 32.52],
+    low: [29.41, 29.32, 29.96, 28.74, 28.56, 28.41, 28.08, 27.43, 27.66, 27.83, 27.40, 27.09, 26.18, 26.13, 26.63, 26.13, 25.43, 25.35, 25.88, 26.96, 27.14, 28.01, 27.88, 27.99, 28.76, 29.14, 28.71, 28.93, 30.03, 29.39, 30.14, 30.43, 29.35, 29.99, 29.52, 30.94, 31.54, 31.36, 30.92, 31.20, 32.13, 32.23, 31.97, 31.56, 32.21, 32.63, 31.76],
+    period: period
+};
+console.log(ADX.calculate(input));
+
+// const sma = require('technicalindicators').sma;
+// var prices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15];
+// var period = 10;
+// console.log(sma({ period: period, values: prices }));
+
+// const SMA = require('technicalindicators').SMA;
+// var prices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15];
+// var period = 10;
+// console.log(SMA.calculate({ period: period, values: prices }));
+
 
 /**
  * History close prices
@@ -58,6 +77,7 @@ const updatedArrayMarkets = async(arrayMarkets, symbol, close) => {
     });
 };
 
+
 let quantityCurrency = {};
 const calcQuantity = (symbol, close, lot) => {
     return new Promise((resolve, reject) => {
@@ -97,8 +117,18 @@ const calcQuantity = (symbol, close, lot) => {
         resolve(resQuantityNro);
     });
 };
+// testeo de calcQuantity
+// const testCalcQuantity = () => {
+//     let v = 0.00;
+//     for (let index = 0; index < 10000; index++) {
+//         v += 0.01;
+//         calcQuantity("test", v, 22);
+//     };
+// };
+// testCalcQuantity();
 
-const formatQuantity = (quantity) => { // debo agregar un parametro mas, que indicaria que cantidad de digitos debe ser formateada la cifra
+
+const formatQuantity = (quantity) => { // debo agregar un parametro mas, que indicaria a que cantidad de digitos debe ser formateada la cifra
     return new Promise((resolve, reject) => {
         let pEntera = Math.floor(quantity);
         let resQuantityNro;
@@ -136,17 +166,10 @@ const formatQuantity = (quantity) => { // debo agregar un parametro mas, que ind
     });
 };
 
-const testCalcQuantity = () => {
-    let v = 0.00;
-    for (let index = 0; index < 10000; index++) {
-        v += 0.01;
-        calcQuantity("test", v, 22);
-    };
-};
-// testCalcQuantity();
 
-// let currencies = { "BTCUSDT": "BTC", "ETHUSDT": "ETH", "ADAUSDT": "ADA", "BNBUSDT": "BNB", "DOGEUSDT": "DOGE", "ETCUSDT": "ETC", "BCHUSDT": "BCH", "LINKUSDT": "LINK", "VETUSDT": "VET", "SOLUSDT": "SOL", "TRXUSDT": "TRX", "IOTAUSDT": "IOTA" };
-let currencies = { "USDT": "USDT", "BNBUSDT": "BNB", "BTCUSDT": "BTC" };
+let currencies = { "USDT": "USDT", "BNBUSDT": "BNB", "BTCUSDT": "BTC", "ETHUSDT": "ETH", "ADAUSDT": "ADA" };
+
+// falta desarrollar la siguiente funcion: "buildNameCurrency(markets)". Recorre el array markets y a partir de alli crea el objeto "currencies" compuesto por: "par : moneda" (ej: "ADAUSDT : ADA")
 const buildNameCurrency = (markets) => {
     markets.forEach((curr, idx, market) => {
         // flagStartMarkets[`${curr}`] = true;
@@ -157,13 +180,7 @@ const buildNameCurrency = (markets) => {
 };
 
 
-// *Si el resultado se encuentra en el cuerpo de la funcion, simplemente se recurre a return y se muestra con .then o async/await
-// *Si el resultado se encuentra en el callback de la funcion, entonces el return no funcionara por que retornara al callback y
-// no a la funcion principal, se soluciona pasando un callback a la funcion principal con el resultado requerido. O usando 
-// promisify, la cual requiere importar el modulo.
-
-
-// guarda todos los detalles del account dentro del objeto detailMarginAccount.
+// guarda todos los detalles del account dentro del objeto detailMarginAccount
 let detailMarginAccount = {};
 const detailAccount = () => {
     return new Promise(async(resolve, reject) => {
@@ -171,14 +188,14 @@ const detailAccount = () => {
         try {
             await binance.mgAccount((error, response) => {
                 if (error) return console.warn(error);
-                let account = response.userAssets.filter(curr => { // account: no es usado
+                let account = response.userAssets.filter(curr => { // account: no es usado, en vez de eso se agrega los datos al objeto "detailMarginAccount"
                     for (let currency in currencies) {
                         if (currencies[currency] == curr.asset) {
                             detailMarginAccount[currency] = curr;
-                            // return true;
+                            // return true; // no necesario
                         };
                     };
-                    // return false;
+                    // return false; // no necesario
                 });
                 resolve(detailMarginAccount);
             });
@@ -189,10 +206,10 @@ const detailAccount = () => {
     });
 };
 
-
+// positionCalculator (fiat, resOne) :
 // modifica el objeto detailMarginAccount, agregandole el freeUsdt y borrowedUsdt.
-// freeUsdt: es la propiedad free (balance libre/disponible), pero convertido en usdt.
-// borrowedUsdt: es la propiedad borrowed (prestado), pero convertido en usdt.
+// freeUsdt: es la propiedad free (balance libre/disponible), pero convertido en usdt. Su uso es para referencia
+// borrowedUsdt: es la propiedad borrowed (prestado), pero convertido en usdt. Su uso es para referencia
 const positionCalculator = (fiat, resOne) => {
     return new Promise(async(resolve, reject) => {
         console.log(`- Loading current margin positions...`);
@@ -244,14 +261,14 @@ const marginMarketSell = (symbol, quantity) => { //quantityCurrency[symbol]
 
 const marginBorrow = (currency, quantity) => {
     return new Promise(async(resolve, reject) => {
-        await binance.mgBorrow(currency, quantity, (error, response) => { //borrow usdt y compro btc
+        await binance.mgBorrow(currency, quantity, (error, response) => {
             if (error) {
                 console.log(`Error marginBorrow, persistencia..`);
                 console.error(error.body);
                 setTimeout((currency, quantity) => {
                     resolve(marginBorrow(currency, quantity));
                 }, 3000);
-                // reject(error.body);
+                // reject(error);
             };
             console.log(`BORROW, quantity: ${currency} ${quantity}, Status: SUCCESS`);
             resolve(response);
@@ -259,7 +276,7 @@ const marginBorrow = (currency, quantity) => {
     });
 };
 
-const marginRepay = (currency, quantity) => { //  (currencies[symbol], quantityCurrency[symbol]  -  (fiat, lot)
+const marginRepay = (currency, quantity) => {
     return new Promise(async(resolve, reject) => {
         await binance.mgRepay(currency, quantity, (error, response) => { //repay usdt
             if (error) {
@@ -268,24 +285,13 @@ const marginRepay = (currency, quantity) => { //  (currencies[symbol], quantityC
                 setTimeout((currency, quantity) => {
                     resolve(marginRepay(currency, quantity));
                 }, 3000);
-                // reject(error.body);
+                // reject(error);
             };
-            console.log(`REPAY, quantity: ${currency} ${quantity}, Status: SUCCESS`); // console.log(response); //   [Object: null prototype] { tranId: 67414878854, clientTag: '' }
+            console.log(`REPAY, quantity: ${currency} ${quantity}, Status: SUCCESS`);
             resolve(response);
         });
     });
 };
-const segundo = async() => {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            resolve('paso 2');
-        }, 3000);
-    });
-};
-
-// let currencies = { "USDT": "USDT", "BNBUSDT": "BNB", "BTCUSDT": "BTC", "ETHUSDT": "ETH", "ADAUSDT": "ADA" };
-// detailMarginAccount[currency].currentSideMargin = null;
-// Object.keys(currencies.currency);
 
 const zeroPositionCrypto = fiat => { // symbol optativo
     return new Promise(async(resolve, reject) => {
@@ -405,7 +411,7 @@ const flagSide = (fiat, resTwo) => { // currency = symbol/par
 
                         // tengo shortFail / no fue posicion short || me prestaron crypto, pero no alcance a vender || debo crypto
                     } else if (borrowedCrypto > 10.00 && freeUsdtCrypto > 10.00) {
-                        console.log(`*** flagSide: null, shortFail(1er else if), ${freeUsdtCrypto}, ${borrowedCrypto}`);
+                        console.log(`*** flagSide ${currency}: null, ${freeUsdtCrypto}, ${borrowedCrypto}`);
                         let minorQty = (borrowedCrypto <= freeUsdtCrypto) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"];
                         const response = await marginRepay(currencies[currency], minorQty);
                         detailMarginAccount[currency].currentSideMargin = null;
@@ -413,13 +419,13 @@ const flagSide = (fiat, resTwo) => { // currency = symbol/par
 
                         // tengo fail / tengo crypto, pero sin prestamo de fiat ni de crypto
                     } else if (borrowedFiat < 10.00 && borrowedCrypto < 10.00 && freeUsdtCrypto > 10.00) {
-                        console.log(`*** flagSide: null, fail(2do else if), ${detailMarginAccount[currency]["freeUsdt"]}, ${detailMarginAccount[fiat]["borrowed"]}`);
+                        console.log(`*** flagSide ${currency}: null, ${detailMarginAccount[currency]["freeUsdt"]}, ${detailMarginAccount[fiat]["borrowed"]}`);
                         const response = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
                         detailMarginAccount[currency].currentSideMargin = null;
                         resolve(detailMarginAccount);
 
                     } else {
-                        console.log(`*** flagSide: null, (3er else)`); // en cero entra aqui
+                        console.log(`*** flagSide ${currency}: null`);
                         detailMarginAccount[currency].currentSideMargin = null;
                         resolve(detailMarginAccount);
 
@@ -544,18 +550,20 @@ const order = (signal, symbol, close, lot, fiat) => {
 const trading = (async _ => {
     try {
         // const markets = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "DOGEUSDT", "ETCUSDT", "BCHUSDT", "LINKUSDT", "VETUSDT", "SOLUSDT", "TRXUSDT", "IOTAUSDT"];
-        // const markets = ["BTCUSDT", "ETHUSDT", "ADAUSDT"];
-        let markets = ["ETHUSDT"];
-        let timeFrame = "15m";
-        let length = 20;
+        let markets = ["BTCUSDT", "ETHUSDT", "ADAUSDT"]; // pares a operar
+        let timeFrame = "1m"; // intervalo de las velas
+        let length = 20; // periodo para los indicadores que lo requieran
         let fiat = "USDT";
-        let lot = 100.00; // valor lote, default = 100usd
+        let lot = 15.00; // valor lote
+        let start = false; // default: true (el bot esta operativo)
+        let invertSignal = false; // default: false || invierte la senal (ej: si es 'buy' se convierte a 'sell', idem si es 'sell') || falta implementarlo con el backtesting
+        let closeAllPosition = false; // default false || vende las posiciones y reepaga los prestamos existentes, dejando los pares en cero al arranque de la app
+        let flagBackTesting = false; // default: false || inicia backtesting
 
-        console.log("***Condor Trader-Bot Binance*** \n");
+        console.log("***Abechennon Margin Trader-Bot Binance*** \n");
         console.log(`TimeFrame: ${timeFrame} | Lot Usdt: ${lot} | Capital inicial:  256.79   \n`);
-        console.log(`En desarrollo, controlar: keys, wavesStrategy, markets/timeFrame/lot, calcQuantity, closeAllPosition   \n`);
+        console.log(`En desarrollo, controlar: cabecera, keys, calcQuantity  \n`);
         console.log(`Markets: ${markets} \n`);
-
 
         let historyMarketsCloses = historyCloses(markets, timeFrame, binance);
         let arrayMarkets = await historyMarketsCloses().then(value => {
@@ -568,9 +576,8 @@ const trading = (async _ => {
         // await marginBorrow("ETH", 0.0079, "ETHUSDT"); // quantity = quantityCurrency[symbol]
         // await marginMarketSell("ETHUSDT", 0.008, fiat, lot); // quantity = quantityCurrency[symbol]
 
-        await detailMarginAcc(fiat);
+        await detailMarginAcc(fiat); // trae los detalles de la cuenta de margen
 
-        let closeAllPosition = false; // default false
         if (closeAllPosition == true) {
             let resZeroPositionAll = await zeroPositionAll(fiat);
             if (resZeroPositionAll == "modified") {
@@ -578,18 +585,14 @@ const trading = (async _ => {
             };
         };
 
-        console.log(`- Waiting for signal every: ${timeFrame}... \n`);
-
-        // console.log(detailMarginAccount.USDT);
-        // console.log(detailMarginAccount.BTCUSDT); // recordatorio nav detailMarginAccount.BTCUSDT.freeUsdt
-
-        let flagBackTesting = true; // default: false
         if (flagBackTesting == true) {
             let [, arrayclose] = arrayMarkets[0];
             // console.log(util.inspect(arrayclose, { maxArrayLength: null }));
-            let dataBackTesting = wavesBackTesting(arrayclose, length); //<==
-            backTesting(dataBackTesting); //<==  
+            let dataBackTesting = wavesBackTesting(arrayclose, length); //<== funcion que crea el objeto con los datos que usara el backtesting
+            backTesting(dataBackTesting); // procesamiento del backtesting
         };
+
+        console.log(`- Waiting for signal every: ${timeFrame}... \n`);
 
         await binance.websockets.candlesticks(markets, timeFrame, async(candlesticks) => {
             let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlesticks;
@@ -599,11 +602,17 @@ const trading = (async _ => {
 
                 let updatedMarkets = await updatedArrayMarkets(arrayMarkets, symbol, close);
 
-                // let signal = await waves(updatedMarkets, length); //<== aqui recibe las senales de la estrategia
-                // let signal = 'sell';
-                let signal = 'undefined';
+                let signal = await waves(updatedMarkets, length); //<== aqui la funcion que creara las senales
 
-                if (signal != undefined) {
+                if (invertSignal == true) {
+                    if (signal == 'buy') {
+                        signal = 'sell';
+                    } else if (signal == 'sell') {
+                        signal = 'buy';
+                    };
+                };
+
+                if (start == true && signal != undefined) {
                     await order(signal, symbol, close, lot, fiat);
                     await detailMarginAcc(fiat);
                     console.log(detailMarginAccount.USDT);

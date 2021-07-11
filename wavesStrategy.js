@@ -16,14 +16,14 @@ const waves = async(src, length) => {
         ) {
             flagBuy = true;
             flagSell = false;
-            signal = 'sell'; // default: 'buy'
+            signal = 'buy'; // default: 'buy'
         } else if (flagSell == false &&
             curr < p[idx - 1] && curr < p[idx - 2]
             // && p[idx - 3] > p[idx - 4] && p[idx - 3] > p[idx - 2]
         ) {
             flagBuy = false;
             flagSell = true;
-            signal = 'buy'; // default: 'sell'
+            signal = 'sell'; // default: 'sell'
         }
         //  else {
         //     objectPoint[`${idx}-_${i}`] = curr;
@@ -52,7 +52,13 @@ const wavesBackTesting = (src, length) => {
         if (flagBuy == false &&
             // curr > p[idx - 1] && curr > p[idx - 2] // arriba
             curr < p[idx - 1] && curr < p[idx - 2] // abajo
-            // && p[idx - 3] < p[idx - 4] && p[idx - 3] < p[idx - 2]
+            // &&
+            // p[idx - 3] < p[idx - 4] && p[idx - 3] < p[idx - 2]
+
+            // curr < p[idx - 1] && curr < p[idx - 2] // abajo
+            // // curr > p[idx - 1] && curr > p[idx - 2] // arriba
+            // &&
+            // p[idx - 3] > p[idx - 4] && p[idx - 3] > p[idx - 2]
         ) {
             flagBuy = true;
             flagSell = false;
@@ -63,8 +69,13 @@ const wavesBackTesting = (src, length) => {
         } else if (flagSell == false &&
             // curr < p[idx - 1] && curr < p[idx - 2] // abajo
             curr > p[idx - 1] && curr > p[idx - 2] // arriba
+            // &&
+            // p[idx - 3] > p[idx - 4] && p[idx - 3] > p[idx - 2]
 
-            // && p[idx - 3] > p[idx - 4] && p[idx - 3] > p[idx - 2]
+            // curr > p[idx - 1] && curr > p[idx - 2] // arriba
+            // // curr < p[idx - 1] && curr < p[idx - 2] // abajo
+            // &&
+            // p[idx - 3] < p[idx - 4] && p[idx - 3] < p[idx - 2]
         ) {
             flagBuy = false;
             flagSell = true;

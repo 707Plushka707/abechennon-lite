@@ -1,5 +1,5 @@
-const rsi = require('./indicator/rsi');
-const sma = require('./indicator/sma');
+const rsi = require('../indicator/rsi');
+const sma = require('../indicator/sma');
 
 let buy = 0;
 let sell = 0;
