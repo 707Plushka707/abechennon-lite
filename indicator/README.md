@@ -1,0 +1,1 @@
+En esta carpeta se encuentra el desarrollo de algunos indicadores, pero actualmente se estan usando los indicadores provisto por el modulo technicalindicators https://github.com/anandanand84/technicalindicators

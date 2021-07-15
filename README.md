@@ -1,19 +1,17 @@
-Abechenoon Binance-TraderBot
+Abechenoon TraderBot
 
-Abechenoon es un trader-bot para Binance, en desarrollo y en lenguaje node.js. En la version v1.0 solo operara por el Back-end, no esta proyectado el Front-end en esta version. A partir de la v2.0 se planifica desarrollar el Front-end con React (falta mucho..).
-Este bot puede ser usado solo por desarrolladores/programadores ya que requiere configuraciones/seteos a traves del codigo.
+Que es Abechennon?
+Es un bot de trading para el exchange Binance, en desarrollo con node js. Abechennon opera a traves del comercio de margin, por lo tanto puede hacer uso del apalancaminto que ofrece Binance y operar tanto en operaciones en largos o cortos (long/short).
 
-Ruta de trabajo: 
+Se puede usar?
+Claro, actualmente el desarrollo del back-end ya se encuentra avanzado y con las caracteristicas minimas requeridas, por lo cual puede lanzarlo a traves de la terminal/consola para su operacion. Pero unicamente desarrolladores estaran capacitados para su uso ya que el front-end aun no fue desarrollado y la unica manera de cargar la informacion y editar la estrategia sera a traves de la edicion del proyecto en un IDE.
 
-* Trabajando en rsi-tracker
-* Corregir los fee en operaciones negativas
-
-* Proteger rutas, y la key
-* Instalar/configurar mongo
-* Agregar profit factor
-* Agregar % bateo al backtesting
-* Agregar lending de margin en el backtesting
-* Agregar EMA (4, 9, 18)-(50, 200), ADX, Macd
-* Evaluar agregar DMI y OVB
-* Agregar lineas de tendencias, soportes/resistencia, divergencias macd/rsi, MM(maximo mayor), mm(maximo menor), (minimo mayor), (minimo menor), ath
-* Agregar pool de volumen
+Ruta de desarrollo para el back-end: 
+* Agregar profit factor al backtesting
+* Agregar herramientas de risk manangement (trailing stop, stop loss, etc)
+* Conectar mongo atlas, agregar schemas
+* Agregar routes, endpoints
+* Concatenacion de ordenes (actualmente funciona como ping-pong, si la senial es buy: entonces cierra el short y abre el long en la misma vela)
+* Agregar analisis de herramientas de accion de precios
+* Agregar analisis de pool de volumen
+* Y muchas otras..

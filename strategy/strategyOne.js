@@ -1,12 +1,12 @@
 const rsi = require('../indicator/rsi');
 const sma = require('../indicator/sma');
+const ADX = require('technicalindicators').ADX;
 
 let buy = 0;
 let sell = 0;
 let flagSell = false;
 let flagBuy = false;
 let objectOperation = new Object();
-
 //Failure swing Rsi
 const strategy1 = (src, length) => { //Funcion para armar el objectOperation(objeto con las operaciones de compra/venta), que sera usado por el backTesting
     let calculateRsi = rsi(src, length);
