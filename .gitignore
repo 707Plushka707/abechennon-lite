@@ -1,4 +1,5 @@
 node_modules/
 pStrategy/
+.vscode
 .env
 pTrading.js

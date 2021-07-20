@@ -4,7 +4,7 @@ Que es Abechennon?
 Es un bot de trading para el exchange Binance, en desarrollo con node js. Abechennon opera a traves del comercio de margin, por lo tanto puede hacer uso del apalancaminto que ofrece Binance y operar tanto en operaciones en largos o cortos (long/short).
 
 Como funciona?
-Por el momento solo funciona en modalidad ping-pong, solo opera un lote por vez: o sea, cuando la estrategia envia una senial de compra, el bot cerrara la posicion existente (en el caso que exista (esta sera un short)) y abrira un long, y lo mismo a la inversa, si se envia una senial buy y al otro intervalo de tiempo se envia otra senial de buy, la segunda es ignorada. Parece obvio no?, pero mas adelante se agregara la opcion para que opere con multiples lotes.
+Por el momento solo funciona en modalidad ping-pong, solo opera un lote por vez: o sea, cuando la estrategia envia una senial de compra, el bot cerrara la posicion existente (en el caso que exista (esta sera un short)) y abrira un long con una orden market, y lo mismo a la inversa, si se envia una senial buy y al otro intervalo de tiempo se envia otra senial de buy, la segunda es ignorada. Parece obvio no?, pero mas adelante se agregara la opcion para que opere con multiples lotes.
 * Ejemplo, ping-pong (un lote a la vez): "ignr" = ignorado 
 Senial de la estrategia: buy - sell - buy - sell - sell - sell - buy - sell - buy - buy  - sell - sell - buy - buy  - buy
 Operacion de abechennon: buy - sell - buy - sell - ignr - ignr - buy - sell - buy - ignr - sell - ignr - buy - ignr - ignr
@@ -27,16 +27,15 @@ Si eres desarrollador y no quieres esperar a que se complete parte del front-end
 Nota: BNB no se debe operar, ya que actualmente esta configurado para no tenerlo en cuenta (por que se lo usa para pagar los intereses de los prestamos y las comisiones).
 
 Ruta de desarrollo para el back-end: 
-* Seguir documentando
-* Agregar profit factor al backtesting
-** Desarrollar en 'trading.js' la funcion buildNameCurrency (Genera los nombres de las monedas a partir de los nombres de los pares, ej: "ADA" : "ADAUSDT"), y agrega el nombre recuperado de la moneda ("ADA") al objeto "currencies"
-** Cuando cargue los datos de la cta con (detailMarginAcc()), deberia pushear y armar un objeto marketsBackTesting para despues usarlo en un ciclo de backtesting.
-** Desarrollar modalidad de multiples lotes(lotes acumulativos) con limite seteables de lotes
-* Agregar herramientas de risk manangement (trailing stop, stop loss, profit %, etc)
-* Crear las rutas
+* Documentar
+* Desarrollar profit factor al backtesting
+* Desarrollar en 'trading.js' la funcion buildNameCurrency (Genera los nombres de las monedas a partir de los nombres de los pares, ej: "ADA" : "ADAUSDT"), y agrega el nombre recuperado de la moneda ("ADA") al objeto "currencies"
+* Desarrollar modalidad de multiples lotes(lotes acumulativos) con limite seteables de lotes
+* Desarrollar herramientas de risk manangement (trailing stop, stop loss, profit %, etc)
+* Desarrollar las rutas
 * Setear los input de los indicadores
-* Agregar analisis de herramientas de accion de precios
-* Agregar analisis de pool de volumen
+* Desarrollar paper trading
+* Desarrollar ordenes limit
 * Y muchas otras..
 
 Ruta de desarrollo para el front-end (con EJS): 

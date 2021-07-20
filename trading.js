@@ -1,11 +1,10 @@
 /* ============================================================
- * Abechennon Margin Trader-Bot Binance
+ * Abechennon Margin Trader Bot Binance
  * https://github.com/pablob206/abechennon-traderbot
  * ============================================================
- * 2021 - Pablo Brocal - pablob206@hotmail.com
+ * Copyright 2021-, Pablo Brocal - pablob206@hotmail.com
+ * Released under the MIT License
  * ============================================================
- * Null Copyright--
- * 
  */
 
 
