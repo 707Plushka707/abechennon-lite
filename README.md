@@ -29,11 +29,12 @@ Nota: BNB no se debe operar, ya que actualmente esta configurado para no tenerlo
 Ruta de desarrollo para el back-end: 
 * Seguir documentando
 * Agregar profit factor al backtesting
-* Desarrollar en 'trading.js' la funcion buildNameCurrency (Genera los nombres de las monedas a partir de los nombres de los pares, ej: "ADA" : "ADAUSDT"), y agrega el nombre recuperado de la moneda ("ADA") al objeto "currencies"
+** Desarrollar en 'trading.js' la funcion buildNameCurrency (Genera los nombres de las monedas a partir de los nombres de los pares, ej: "ADA" : "ADAUSDT"), y agrega el nombre recuperado de la moneda ("ADA") al objeto "currencies"
+** Cuando cargue los datos de la cta con (detailMarginAcc()), deberia pushear y armar un objeto marketsBackTesting para despues usarlo en un ciclo de backtesting.
+** Desarrollar modalidad de multiples lotes(lotes acumulativos) con limite seteables de lotes
 * Agregar herramientas de risk manangement (trailing stop, stop loss, profit %, etc)
 * Crear las rutas
 * Setear los input de los indicadores
-* Desarrollar modalidad de multiples lotes(lotes acumulativos) con limite seteables de lotes
 * Agregar analisis de herramientas de accion de precios
 * Agregar analisis de pool de volumen
 * Y muchas otras..

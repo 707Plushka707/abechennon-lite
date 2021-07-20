@@ -567,11 +567,11 @@ const trading = (async _ => {
         // let markets = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "DOGEUSDT", "ETCUSDT", "BCHUSDT", "LINKUSDT", "VETUSDT", "SOLUSDT", "TRXUSDT", "IOTAUSDT"];
         // let markets = ["BTCUSDT", "ETHUSDT", "ADAUSDT"]; // pares a operar
         let markets = ["ETHUSDT"], // pares a operar (no operar BNBUSDT)
-            timeFrame = "15m", // intervalo de las velas    
+            timeFrame = "1m", // intervalo de las velas    
             fiat = "USDT", // default: USDT
             lot = 15.00, // valor lote en fiat (USDT)
             start = false, // default: true (ejecutara las ordenes que indique la estrategia cuando haya alguna senial)
-            closeAllPosition = false, // default false || vende las posiciones y repaga los prestamos existentes, dejando los pares en cero al arranque de la app
+            closeAllPosition = true, // default false || vende las posiciones y repaga los prestamos existentes, dejando los pares en cero al arranque de la app
             flagBackTesting = true, // default: false || inicia backtesting
             invertSignal = true; // default: false || invierte la senal (ej: si es 'buy' se convierte a 'sell', idem si es 'sell') || falta implementarlo con el backtesting
 
@@ -601,9 +601,9 @@ const trading = (async _ => {
             markets.forEach(async(curr) => {
                 console.log(` \n`)
                 console.log(`=======================***${curr}***=======================`);
-                let dataBackTesting = await classicRsi(inputHistoryCandlestick[curr], false, true, 14, 30, 70); // funcion que crea el objeto con los datos que usara el backtesting
-                // let dataBackTesting = await waves(inputHistoryCandlestick[curr], true, true, length);
-                backTesting(dataBackTesting); // procesamiento del backtesting
+                // let dataBackTesting = await classicRsi(inputHistoryCandlestick[curr], false, true, 14, 30, 70); // funcion que crea el objeto con los datos que usara el backtesting
+                let dataBackTesting = await waves(inputHistoryCandlestick[curr], true, true, 7);
+                await backTesting(dataBackTesting); // procesamiento del backtesting
 
             });
         };
@@ -618,14 +618,14 @@ const trading = (async _ => {
 
                 await updatedHistoryCandlesticks(candlesticks);
 
-                let signal = await classicRsi(inputHistoryCandlestick[symbol], false, false, 14, 30, 70); // funcion que creara las senales
-                // let signal = await waves(inputHistoryCandlestick[symbol], true, false, 25);
+                // let signal = await classicRsi(inputHistoryCandlestick[symbol], false, false, 14, 30, 70); // funcion que creara las senales
+                let signal = await waves(inputHistoryCandlestick[symbol], false, false, 7);
 
                 if (start == true && signal != undefined) {
                     await order(signal, symbol, close, lot, fiat);
                     await detailMarginAcc(fiat);
-                    // console.log(detailMarginAccount.USDT);
-                    // console.log(detailMarginAccount[symbol]);
+                    console.log(detailMarginAccount.USDT);
+                    console.log(detailMarginAccount[symbol]);
                 };
             };
         });
