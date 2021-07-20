@@ -1,25 +1,23 @@
 const util = require('util') // util.inspect expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
-const Binance = require('node-binance-api');
-const { prevPrice, percent } = require('./indicator/utils');
-const { waves, wavesBackTesting } = require('./strategy/strategyWaves');
+const { prevPrice, percent } = require('./utils');
+const { waves, wavesBackTesting } = require('./pStrategy/strategyWaves');
+const classicRsi = require('./strategy/strategyRsi');
 
-//=================== Back-Testing ===================
 
 const backTesting = (src) => {
-    let profit = 0;
-    let profitParcial = 0;
-    let parcialPercent;
-    let totalPercent = 0;
-    let percentFee = 0.1;
-    let totalOperations = 0;
-    let winners = 0;
-    let losers = 0;
-    let result;
-    let profitLoss = 0;
-    let profitWin = 0;
-
-    let arrayOperation = Object.entries(src);
-    // console.log(arrayOperation);
+    let profit = 0,
+        profitParcial = 0,
+        parcialPercent,
+        totalProfit = 0,
+        totalOperations = 0,
+        winners = 0,
+        losers = 0,
+        profitLoss = 0,
+        profitWin = 0,
+        buy = 0, // contador buy
+        sell = 0, // contador sell
+        percentFee = 0.1,
+        arrayOperation = Object.entries(src);
 
     console.log("=====================***BACKTESTING***=====================");
 
@@ -28,12 +26,13 @@ const backTesting = (src) => {
         let currentPrice = arrayOperation[ix][1];
 
         if (operation[0].includes('Buy') && previousPrice != 0) {
+            buy += 1;
             totalOperations += 1;
             fee = percent(currentPrice, percentFee);
             profitParcial = (previousPrice - currentPrice) - fee;
             profit += profitParcial;
             parcialPercent = ((100 - ((currentPrice / previousPrice) * 100))) - percentFee;
-            totalPercent += parcialPercent;
+            totalProfit += parcialPercent;
             if (Math.sign(profitParcial) == 1) {
                 winners += 1;
                 result = 'WINNER';
@@ -51,17 +50,18 @@ const backTesting = (src) => {
             // console.log(`Profit parcial: ${profitParcial}`);
             // console.log(`Profit Total: ${profit}`);
             // console.log(`% Parcial: ${parcialPercent}`);
-            // console.log(`% Total: ${totalPercent}`);
+            // console.log(`% Total: ${totalProfit}`);
             // console.log("-----------------------------------------------------------");
 
 
         } else if (operation[0].includes('Sell') && previousPrice != 0) {
+            sell += 1;
             totalOperations += 1;
             fee = percent(currentPrice, percentFee);
             profitParcial = (currentPrice - previousPrice) - fee;
             profit += profitParcial;
             parcialPercent = (((currentPrice / previousPrice) * 100) - 100) - percentFee;
-            totalPercent += parcialPercent;
+            totalProfit += parcialPercent;
             if (Math.sign(profitParcial) == 1) {
                 winners += 1;
                 result = 'WINNER';
@@ -78,7 +78,7 @@ const backTesting = (src) => {
             // console.log(`Profit parcial: ${profitParcial}`);
             // console.log(`Profit Total: ${profit}`);
             // console.log(`% Parcial: ${parcialPercent}`);
-            // console.log(`% Total: ${totalPercent}`);
+            // console.log(`% Total: ${totalProfit}`);
             // console.log("-----------------------------------------------------------");
 
         };
@@ -87,14 +87,10 @@ const backTesting = (src) => {
     let success = (winners * 100) / totalOperations; // % aciertos
     let profitAverageLoss = profitLoss / losers;
     let profitAveragewin = profitWin / winners;
-    let profitFactorSimple = profitWin / profitLoss; // corregir
-    let profitFactorComplex = (profitAveragewin * success) / (1 - success) * profitAverageLoss; // corregir
-    // riesgo-beneficio > 1.5
-    console.log(`Total Operations: ${totalOperation}`);
+    console.log(`Total Operations: ${totalOperation} (Counter, Buy: ${buy}| Sell: ${sell})`);
     console.log(`Winners: ${winners}, Losers: ${losers}`);
     console.log(`Success: % ${success}`);
-    // console.log(`Profit Factor Simple: ${profitFactorSimple} || Profit Factor complex: ${profitFactorComplex}`);
-    console.log(`Total Profit: % ${totalPercent}`);
+    console.log(`Total Profit: % ${totalProfit}`);
     console.log("=========================================================== \n");
 };
 
