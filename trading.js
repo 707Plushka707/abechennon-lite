@@ -571,9 +571,9 @@ const trading = (async _ => {
             fiat = "USDT", // default: USDT
             lot = 15.00, // valor lote en fiat (USDT)
             start = false, // default: true (ejecutara las ordenes que indique la estrategia cuando haya alguna senial)
-            closeAllPosition = true, // default false || vende las posiciones y repaga los prestamos existentes, dejando los pares en cero al arranque de la app
+            closeAllPosition = false, // default false || vende las posiciones y repaga los prestamos existentes, dejando los pares en cero al arranque de la app
             flagBackTesting = true, // default: false || inicia backtesting
-            invertSignal = true; // default: false || invierte la senal (ej: si es 'buy' se convierte a 'sell', idem si es 'sell') || falta implementarlo con el backtesting
+            invertSignal = false; // default: false || invierte la senal (ej: si es 'buy' se convierte a 'sell', idem si es 'sell') || falta implementarlo con el backtesting
 
         console.log("***Abechennon Margin Trader-Bot Binance*** \n");
         console.log(`TimeFrame: ${timeFrame} | Lot Usdt: ${lot} | Start: ${start} \n`);
@@ -601,8 +601,7 @@ const trading = (async _ => {
             markets.forEach(async(curr) => {
                 console.log(` \n`)
                 console.log(`=======================***${curr}***=======================`);
-                // let dataBackTesting = await classicRsi(inputHistoryCandlestick[curr], false, true, 14, 30, 70); // funcion que crea el objeto con los datos que usara el backtesting
-                let dataBackTesting = await waves(inputHistoryCandlestick[curr], true, true, 7);
+                let dataBackTesting = await classicRsi(inputHistoryCandlestick[curr], false, true, 14, 30, 70); // funcion que crea el objeto con los datos que usara el backtesting
                 await backTesting(dataBackTesting); // procesamiento del backtesting
 
             });
@@ -618,8 +617,7 @@ const trading = (async _ => {
 
                 await updatedHistoryCandlesticks(candlesticks);
 
-                // let signal = await classicRsi(inputHistoryCandlestick[symbol], false, false, 14, 30, 70); // funcion que creara las senales
-                let signal = await waves(inputHistoryCandlestick[symbol], false, false, 7);
+                let signal = await classicRsi(inputHistoryCandlestick[symbol], false, false, 14, 30, 70); // funcion que creara las senales
 
                 if (start == true && signal != undefined) {
                     await order(signal, symbol, close, lot, fiat);
