@@ -5,6 +5,7 @@ const app = express();
 require('./config/config');
 const { dbConnection } = require('./config/db');
 require('./trading');
+// require('./pTrading');
 
 dbConnection();
 

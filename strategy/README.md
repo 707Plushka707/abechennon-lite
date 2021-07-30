@@ -2,4 +2,4 @@ En esta carpeta debe crear un archivo js con su estrategia haciendo uso de los i
 
 A modo de ejemplo tiene el archivo "strategyRsi.js" la cual envia las seniales clasicas de oversold/overbougth del RSI.
 
-Trate de combinar los indicadores y probar su estrategia en el backtesting nativo de abechennon (se pueden probar las ultimas 500 velas).
+Trate de combinar los indicadores y probar su estrategia en el backtesting nativo de abechennon (se pueden probar hasta las ultimas 500 velas).

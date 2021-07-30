@@ -2,14 +2,16 @@ const util = require('util') // console.log(util.inspect(array, { maxArrayLength
 const RSI = require('technicalindicators').RSI;
 
 
-const classicRsi = (src, invertSignal = false, backTesting = false, length, oversold, overbought) => {
+const classicRsi = (symbol, src, invertSignal = false, backTesting = false, length, oversold, overbought) => {
     return new Promise((resolve, reject) => {
         let { open, close, high, low } = src,
         arrayPointRsi = RSI.calculate({ values: close, period: length }),
             flagBuy = false,
             flagSell = false,
             signal,
-            objectPoint = new Object();
+            objectPoint = {
+                [symbol]: {}
+            };
 
         src.close.map((curr, idx, p) => {
             let i = 499 - idx; // es el indice pero al reves, sirve para ubicarnos en tradingview
@@ -23,11 +25,11 @@ const classicRsi = (src, invertSignal = false, backTesting = false, length, over
                 if (invertSignal == false && backTesting == false) {
                     signal = 'buy';
                 } else if (invertSignal == false && backTesting == true) {
-                    objectPoint[`Buy_${idx}-${i}`] = curr;
+                    objectPoint[symbol][`Buy_${idx}-${i}`] = curr;
                 } else if (invertSignal == true && backTesting == false) {
                     signal = 'sell';
                 } else if (invertSignal == true && backTesting == true) {
-                    objectPoint[`Sell_${idx}-${i}`] = curr;
+                    objectPoint[symbol][`Sell_${idx}-${i}`] = curr;
                 };
 
             } else if (flagSell == false && rsi > overbought) {
@@ -37,14 +39,15 @@ const classicRsi = (src, invertSignal = false, backTesting = false, length, over
                 if (invertSignal == false && backTesting == false) {
                     signal = 'sell';
                 } else if (invertSignal == false && backTesting == true) {
-                    objectPoint[`Sell_${idx}-${i}`] = curr;
+                    objectPoint[symbol][`Sell_${idx}-${i}`] = curr;
                 } else if (invertSignal == true && backTesting == false) {
                     signal = 'buy';
                 } else if (invertSignal == true && backTesting == true) {
-                    objectPoint[`Buy_${idx}-${i}`] = curr;
+                    objectPoint[symbol][`Buy_${idx}-${i}`] = curr;
                 };
             };
         });
+
         if (backTesting == true) {
             resolve(objectPoint);
         } else {

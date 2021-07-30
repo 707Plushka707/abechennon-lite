@@ -17,22 +17,23 @@ Claro, actualmente el desarrollo del back-end ya se encuentra avanzado y con las
 
 Como usarlo?
 Si eres desarrollador y no quieres esperar a que se complete parte del front-end, puedes hacer hard-code(mala practica),e ingresar los siguientes datos:
-* '.env', colocar tu api-key, credenciales de mongoDB
+* '.env', ingresar su api-key de binance, credenciales de mongoDB
+APIKEY = 'xxxxxxxxxxxxxxxxxxxxxxx'
+APISECRET = 'xxxxxxxxxxxxxxxxxxxxxxx'
+
+MONGODB_CNN = mongodb+srv://xxxxxx:xxxxxx@xxxxxxxxxxxxxxxxxxxxxx
+
 * 'trading', funcion trading (setear: todas las variables que estan al comienzo de la funcion trading)
-* 'trading', colocar al objeto "currencies" el nombre de las monedas a operar
-* 'strategy', crear su estrategia o usar las que esten en esa ubicacion (actualmente solo strategyRsi.js)
-* 'trading', colocar la estrategia deseada a la variable signal
-* 'trading', probar la estrategia con backtesting: asignar la estrategia a probar a la variable dataBackTesting
+* 'strategy', crear su estrategia o usar las que esten en esa ubicacion (actualmente, solo y por default strategyRsi.js)
 
 Nota: BNB no se debe operar, ya que actualmente esta configurado para no tenerlo en cuenta (por que se lo usa para pagar los intereses de los prestamos y las comisiones).
 
 Ruta de desarrollo para el back-end: 
 * Documentar
 * Desarrollar profit factor al backtesting
-* Desarrollar en 'trading.js' la funcion buildNameCurrency (Genera los nombres de las monedas a partir de los nombres de los pares, ej: "ADA" : "ADAUSDT"), y agrega el nombre recuperado de la moneda ("ADA") al objeto "currencies"
 * Desarrollar modalidad de multiples lotes(lotes acumulativos) con limite seteables de lotes
 * Desarrollar herramientas de risk manangement (trailing stop, stop loss, profit %, etc)
-* Desarrollar las rutas
+* Desarrollar rutas
 * Setear los input de los indicadores
 * Desarrollar paper trading
 * Desarrollar ordenes limit

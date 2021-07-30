@@ -17,4 +17,13 @@ const dbConnection = async() => {
     };
 };
 
+// let urlDB;
+
+// if (process.env.NODE_ENV === 'dev') {
+//     urlDB = 'mongodb://localhost:27017/bot1';
+// } else {
+//     urlDB = process.env.MONGO_URI;
+// }
+// process.env.URLDB = urlDB;
+
 module.exports = { dbConnection };
