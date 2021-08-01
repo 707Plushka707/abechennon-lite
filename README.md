@@ -23,8 +23,14 @@ APISECRET = 'xxxxxxxxxxxxxxxxxxxxxxx'
 
 MONGODB_CNN = mongodb+srv://xxxxxx:xxxxxx@xxxxxxxxxxxxxxxxxxxxxx
 
-* 'trading', funcion trading (setear: todas las variables que estan al comienzo de la funcion trading)
-* 'strategy', crear su estrategia o usar las que esten en esa ubicacion (actualmente, solo y por default strategyRsi.js)
+* 'trading.js', funcion trading:
+1) Setear: todas las variables que estan al comienzo de la funcion trading
+2) Asignar su estrategia a la variable dataBackTesting (dos veces), por default:
+let dataBackTesting = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 14, 30, 70);
+3) Asignar su estrategia a la variable signal, por default:
+let signal = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, false, 14, 30, 70);
+
+* 'strategy.js', crear su estrategia o usar las que esten en esa ubicacion (actualmente, solo y por default strategyRsi.js)
 
 Nota: BNB no se debe operar, ya que actualmente esta configurado para no tenerlo en cuenta (por que se lo usa para pagar los intereses de los prestamos y las comisiones).
 
@@ -48,3 +54,4 @@ Ruta de desarrollo para el front-end (con EJS):
 * '/trade-history', historial de trades
 * '/support', soporte, documentacion, preguntas/respuestas
 * Y muchas otras..
+

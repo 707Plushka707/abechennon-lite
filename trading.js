@@ -17,6 +17,7 @@ const classicRsi = require('./strategy/strategyRsi');
 const interval = require('interval-promise');
 
 
+
 /**
  * Recupera de la API las ultimas 500 velas historicas(500 es el maximo) y las retorna en promesa 
  * para que la resuelva la funcion historyCandlesticks a traves de un promise all.
@@ -72,7 +73,7 @@ const historyCandlesticks = (markets, timeFrame) => {
  * @param {object} candlesticks - objeto de la API con los ultimos valores de la vela
  * @return {Promise} - 
  */
-const updatedHistoryCandlesticks = (candlesticks) => {
+const updatedHistoryCandlesticks = candlesticks => {
     return new Promise((resolve, reject) => {
         let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlesticks;
         let { o: open, h: high, l: low, c: close, v: volume, n: trades, i: interval, x: isFinal, q: quoteVolume, V: buyVolume, Q: quoteBuyVolume } = ticks;
@@ -114,9 +115,13 @@ const calcQuantity = (close, lot) => {
 const formatQuantity = value => {
     let pEntera = Math.floor(value);
 
-    if (pEntera > 0) {
-        let re = new RegExp('^-?\\d+(?:\.\\d{0,' + (1 || -1) + '})?');
-        return parseFloat(value.toString().match(re)[0]);
+    if (pEntera > 0) { // agregado que si es de 3 digitos no lleve decimales
+        if (pEntera < 100) {
+            let re = new RegExp('^-?\\d+(?:\.\\d{0,' + (1 || -1) + '})?');
+            return parseFloat(value.toString().match(re)[0]);
+        } else if (pEntera >= 100) {
+            return parseFloat(pEntera);
+        };
     } else {
         let flagFloat = false,
             flagZero = true,
@@ -156,28 +161,77 @@ const formatQuantity = value => {
 /**
  * Genera los nombres de las monedas a partir de los nombres de los pares, ej: "ADA" : "ADAUSDT"
  * @param {array} markets - array que almacena los pares que operara el bot
- * @return {object} - 
+ * @param {object} currencies -
+ * @return {object} - Ex: { THETAUSDT: 'THETA', ALGOUSDT: 'ALGO' }
  */
-const buildNameCurrency = markets => {
+const buildNameCurrency = (markets, currencies) => {
+    currencies = {};
+
     currencies['USDT'] = 'USDT';
-    markets.map((curr, idx, market) => {
+    markets.map((curr) => {
         currencies[curr] = curr.replace('USDT', '');
     });
+
     return currencies;
 };
 
 
 /**
- * Trae de la API los detalles de la cuenta de margin
+ * Recupera de la API todas las monedas disponibles en el comercio de margen, y almacena su correspondiente
+ * par contra USDT en el objeto marketsAvailable
+ * @param {object} currencies -
+ * @return {Promise} -  Ex: { XMRUSDT: 'XMR', ADAUSDT: 'ADA' }
+
+ */
+const marginMarketsAvailable = currencies => {
+    return new Promise(async(resolve, reject) => {
+        await binance.mgAccount((error, response) => {
+            if (error) return console.warn(error);
+
+            currencies['USDT'] = 'USDT';
+            response.userAssets.map((curr, idx, src) => {
+                // console.log(curr.asset); //currency
+                // console.log(curr.asset.concat('', 'USDT')); // symbol
+                if (curr.asset != 'USDT' && curr.asset != 'BCHA') {
+                    currencies[curr.asset.concat('', 'USDT')] = curr.asset;
+                };
+            });
+            resolve(currencies);
+        });
+    });
+};
+
+/**
+ * @param {object} currencies - 
+ * @param {array} markets -
  * @return {Promise} - 
  */
-const detailAccount = () => {
+const buildMarketsSymbol = (currencies, markets) => {
+    return new Promise((resolve, reject) => {
+        markets = [];
+        let arrayKeysCurrencies = Object.keys(currencies);
+
+        markets = arrayKeysCurrencies.filter((curr) => {
+            if (curr != 'USDT') {
+                return curr;
+            };
+        });
+
+        resolve(markets);
+    });
+};
+
+/**
+ * Trae de la API los detalles de la cuenta de margin
+ * @param {object} currencies -
+ * @param {object} detailMarginAccount -
+ * @return {Promise} - 
+ */
+const detailAccount = (currencies, detailMarginAccount) => {
     return new Promise((resolve, reject) => {
         console.log(`- Loading detail margin account...`);
         binance.mgAccount((error, response) => {
-            if (error) {
-                reject(`Error detailAccount. ${error.body}`);
-            };
+            if (error) reject(`Error detailAccount. ${error.body}`);
             // account: no es usado, en vez de eso se agrega los datos al objeto detailMarginAccount
             let account = response.userAssets.filter(curr => {
                 let currFormat = {};
@@ -193,8 +247,8 @@ const detailAccount = () => {
                         detailMarginAccount[currency] = currFormat;
                     };
                 };
+                // console.log(detailMarginAccount)
             });
-
             resolve(detailMarginAccount);
         });
     });
@@ -206,17 +260,19 @@ const detailAccount = () => {
  * freeUsdt: es la propiedad free (balance libre/disponible), pero convertido en usdt. Su uso es para referencia en los calculos
  * borrowedUsdt: es la propiedad borrowed (prestado), pero convertido en usdt. Su uso es para referencia en los calculos
  * @param {string} fiat - moneda base(usdt)
- * @param {object} responseDetailAccount - referencia al objeto currencies
+ * @param {object} currencies - 
+ * @param {object} detailMarginAccount -
  * @return {Promise} - 
  */
-const positionCalculator = (fiat, responseDetailAccount) => {
+const positionCalculator = (fiat, currencies, detailMarginAccount) => {
     return new Promise(async(resolve, reject) => {
         console.log(`- Calculate positions in USDT...`);
-        for (let currency in responseDetailAccount) {
+        for (let currency in currencies) {
             // console.log(currency); // par-symbol
             // console.log(currencies[currency]); // moneda
-            if (currencies[currency] != fiat) {
+            if (currencies[currency] != fiat) { // && currencies[currency] != "BNB" && currencies[currency] != "BCHA"
                 let ticket = await binance.prices(currency);
+                // console.log(`currency: ${currency}, ticket: ${ticket[currency]}`);
                 detailMarginAccount[currency].freeUsdt = detailMarginAccount[currency]["free"] * ticket[currency];
                 detailMarginAccount[currency].borrowedUsdt = detailMarginAccount[currency]["borrowed"] * ticket[currency];
             };
@@ -243,8 +299,8 @@ const marginMarketBuy = (symbol, quantity) => {
                     reject(`Error marginMarketBuy: ${symbol}, Qty: ${quantity}, ${error.body}`);
                 };
             } else {
-                // console.log(`Margin Market, ${response.side}, ${response.symbol}: ${response.fills[0].qty} (usdt ${response.cummulativeQuoteQty}), status: ${response.status}`);
-                resolve(`Margin Market, ${response.side}, ${response.symbol}: ${response.fills[0].qty} (usdt ${response.cummulativeQuoteQty}), status: ${response.status}`); // devuelvo la cantidad ejecutada || response.fills[0].qty (cantidad ejecutada)
+                console.log(`Margin Market, ${response.side}, ${response.symbol}: ${response.fills[0].qty} (usdt ${response.cummulativeQuoteQty}), status: ${response.status}`);
+                resolve(response); // cantidad ejecutada => response.fills[0].qty (cantidad ejecutada)
             };
         });
     });
@@ -267,8 +323,8 @@ const marginMarketSell = (symbol, quantity) => {
                     reject(`Error marginMarketSell: symbol: ${symbol}, Qty: ${quantity}, ${error.body}`);
                 };
             } else {
-                // console.log(`Margin Market, ${response.side}, ${response.symbol}: ${response.fills[0].qty} (usdt ${response.cummulativeQuoteQty}), status: ${response.status}`);
-                resolve(`Margin Market, ${response.side}, ${response.symbol}: ${response.fills[0].qty} (usdt ${response.cummulativeQuoteQty}), status: ${response.status}`);
+                console.log(`Margin Market, ${response.side}, ${response.symbol}: ${response.fills[0].qty} (usdt ${response.cummulativeQuoteQty}), status: ${response.status}`);
+                resolve(response);
             };
         });
     });
@@ -291,8 +347,8 @@ const marginBorrow = (currency, quantity) => {
                     reject(`Error ${nroError}, ${error.body}`);
                 };
             } else {
-                // console.log(`BORROW, quantity: ${currency} ${quantity}, Status: SUCCESS`);
-                resolve(`BORROW, quantity: ${currency} ${quantity}, Status: SUCCESS`); // [Object: null prototype] { tranId: 69655107900, clientTag: '' }
+                console.log(`BORROW, quantity: ${currency} ${quantity}, Status: SUCCESS`);
+                resolve(response); // [Object: null prototype] { tranId: 69655107900, clientTag: '' }
             };
         });
 
@@ -320,8 +376,8 @@ const marginRepay = (currency, quantity) => {
                     reject(`Error ${nroError}, ${error.body}`);
                 };
             } else {
-                // console.log(`REPAY, quantity: ${currency} ${quantity}, Status: SUCCESS`);
-                resolve(`REPAY, quantity: ${currency} ${quantity}, Status: SUCCESS`);
+                console.log(`REPAY, quantity: ${currency} ${quantity}, Status: SUCCESS`);
+                resolve(response);
             };
         });
     });
@@ -331,11 +387,14 @@ const marginRepay = (currency, quantity) => {
 /**
  * Cierra las posiciones existentes (las que se indiquen en el array markets)
  * @param {string} fiat - moneda base(usdt)
+ * @param {object} detailMarginAccount - 
+ * @param {object} currencies - 
  * @return {Promise} - 
  */
-const closeAllCryptoPosition = fiat => {
+const closeAllCryptoPosition = (fiat, detailMarginAccount, currencies) => {
     return new Promise(async(resolve, reject) => {
-        let status;
+        let status,
+            minorQty;
 
         for (let currency in detailMarginAccount) {
             // console.log(currency); // par-symbol
@@ -345,14 +404,14 @@ const closeAllCryptoPosition = fiat => {
                 if (detailMarginAccount[fiat]["borrowed"] > 10.00 && detailMarginAccount[currency]["freeUsdt"] > 10.00) {
                     console.log(`***Cerrando posicion LONG ${currency}, devolviendo ${fiat}..`);
                     const resMarginMarketSell = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
-                    let minorQty = (resMarginMarketSell.cummulativeQuoteQty <= detailMarginAccount[fiat]["borrowed"]) ? resMarginMarketSell.cummulativeQuoteQty : detailMarginAccount[fiat]["borrowed"];
+                    minorQty = (detailMarginAccount[fiat]["borrowed"] <= resMarginMarketSell.cummulativeQuoteQty) ? detailMarginAccount[fiat]["borrowed"] : resMarginMarketSell.cummulativeQuoteQty;
                     await marginRepay(fiat, minorQty);
                     status = "modified";
 
                     // shortFail / no fue posicion short || me prestaron crypto, pero no se vendio || debo crypto
                 } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 10.00) {
                     console.log(`***Shortfail (devolviendo ${currencies[currency]}, sin inicio de short)..`);
-                    let minorQty = (detailMarginAccount[currency]["borrowedUsdt"] <= detailMarginAccount[currency]["freeUsdt"]) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"];
+                    minorQty = (detailMarginAccount[currency]["borrowed"] <= detailMarginAccount[currency]["free"]) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"];
                     await marginRepay(currencies[currency], minorQty);
                     status = "modified";
 
@@ -360,19 +419,21 @@ const closeAllCryptoPosition = fiat => {
                 } else if (detailMarginAccount[currency]["freeUsdt"] < 10.00 && detailMarginAccount[currency]["borrowedUsdt"] > 10.00) {
                     console.log(`***Cerrando posicion SHORT ${currency}, devolviendo ${currencies[currency]}..`);
                     const resMarginMarketBuy = await marginMarketBuy(currency, detailMarginAccount[currency]["borrowed"]);
-                    await marginRepay(currencies[currency], parseFloat(resMarginMarketBuy.fills[0].qty));
+                    await detailAccount(currencies, detailMarginAccount);
+                    minorQty = (detailMarginAccount[currency]["borrowed"] <= detailMarginAccount[currency]["free"]) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"]; // resMarginMarketBuy.cummulativeQuoteQty (14,03 udst) // resMarginMarketBuy.fills[0].qty (0.44 currency)
+                    await marginRepay(currencies[currency], minorQty); // parseFloat(resMarginMarketBuy.fills[0].qty)
                     status = "modified";
 
-                    // quedo crypto rezagado
+                    // tengo cripto comprado, pero sin apalancamiento
                 } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[fiat]["borrowed"] < 10.00) {
                     console.log(`...Quedo crypto rezagado,  ${currency}`);
-                    const resMarginMarketSell = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
+                    await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
                     status = "modified";
 
                     // tengo cripto comprado, pero sin apalancamiento
                 } else if (detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[fiat]["borrowed"] > 10.00) {
                     console.log(`***Cerrando posicion LONG ${currency}, (pero sin apalancamiento), NO debo ${fiat}..`);
-                    const resMarginMarketSell = await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
+                    await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
                     status = "modified";
                 };
             };
@@ -391,19 +452,23 @@ const closeAllCryptoPosition = fiat => {
  * Verifica si el par esta con posicion existente en long o short, de lo contrario no hay posicion (es null). 
  * Y si hay posicion invalida (a medio terminar) las cierra.
  * @param {string} fiat - moneda base(usdt)
- * @param {object} responsePositionCalculator - referencia al objeto currencies
+ * @param {object} currencies - 
+ * @param {object} detailMarginAccount - 
  * @return {Promise}
  */
-const currentSide = (fiat, responsePositionCalculator) => {
+const currentSide = (fiat, currencies, detailMarginAccount) => {
     return new Promise(async(resolve, reject) => {
         console.log(`- Calculate current side position...`);
         // console.log(currency); // par-symbol
         // console.log(currencies[currency]); // moneda
         let status = 'noModified';
         // console.log(detailMarginAccount);
+        // console.log(responsePositionCalculator);
 
-        for (let currency in responsePositionCalculator) { // currency = symbol
-            if (currencies[currency] != fiat && currencies[currency] != "BNB") {
+        for (let currency in currencies) { // currency = symbol
+            if (currencies[currency] != fiat) { // && currencies[currency] != "BNB" && currencies[currency] != "BCHA"
+                // console.log(detailMarginAccount[fiat]["borrowed"])
+
                 // tengo posicion: long
                 if (detailMarginAccount[currency]["borrowedUsdt"] < 10.00 && detailMarginAccount[currency]["freeUsdt"] > 10.00 && detailMarginAccount[fiat]["borrowed"] > 10.00) {
                     // if (detailMarginAccount[fiat]["borrowed"] > 10.00 && detailMarginAccount[currency]["freeUsdt"] < 10.00) = // tengo longFail / no fue posicion long || me prestaron fiat, pero no alcance a comprar || debo fiat (no se puede validar cuando hay multiples mercados)
@@ -418,15 +483,15 @@ const currentSide = (fiat, responsePositionCalculator) => {
                     // shortFail / tengo prestamo crypto, pero no posicion short
                 } else if (detailMarginAccount[currency]["borrowedUsdt"] > 10.00 && detailMarginAccount[currency]["freeUsdt"] > 10.00) {
                     console.log(`*** Current position ${currency}: null. Active crypto loan ${detailMarginAccount[currency]["borrowed"]} (USDT: ${detailMarginAccount[currency]["borrowedUsdt"]})`);
-                    let minorQty = (detailMarginAccount[currency]["borrowedUsdt"] < detailMarginAccount[currency]["freeUsdt"]) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"];
-                    const resMarginRepay = await marginRepay(currencies[currency], minorQty);
+                    let minorQty = (detailMarginAccount[currency]["borrowed"] <= detailMarginAccount[currency]["free"]) ? detailMarginAccount[currency]["borrowed"] : detailMarginAccount[currency]["free"];
+                    await marginRepay(currencies[currency], minorQty);
                     detailMarginAccount[currency].currentSideMargin = null;
                     status = 'modified';
 
                     // tengo fail / tengo crypto, pero sin prestamo de fiat ni de crypto
                 } else if (detailMarginAccount[fiat]["borrowed"] < 10.00 && detailMarginAccount[currency]["borrowedUsdt"] < 10.00 && detailMarginAccount[currency]["freeUsdt"] > 10.00) {
                     console.log(`*** Current position ${currency}: null. Holding crypto without a loan ${detailMarginAccount[currency]["free"]} (USDT: ${detailMarginAccount[currency]["freeUsdt"]})`);
-                    const resMarginMarketSell = await marginMarketSell(currency, formatQuantity(detailMarginAccount[currency]["free"]));
+                    await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
                     detailMarginAccount[currency].currentSideMargin = null;
                     status = 'modified';
 
@@ -444,21 +509,22 @@ const currentSide = (fiat, responsePositionCalculator) => {
 /**
  * LLama a otras funciones para hacer un calculo completo de los detalles de la cuenta de margin
  * @param {string} fiat - moneda base(usdt)
+ * @param {object} currencies - contine par - symbol
+ * @param {object} detailMarginAccount -
  * @return {Promise}
  */
-const detailMarginAcc = fiat => {
+const detailMarginAcc = (fiat, currencies, detailMarginAccount) => {
     return new Promise(async(resolve, reject) => {
-        let responseDetailAccount = await detailAccount(fiat);
-        let responsePositionCalculator = await positionCalculator(fiat, responseDetailAccount);
-        let responseCurrentSide = await currentSide(fiat, responsePositionCalculator);
+        detailMarginAccount = await detailAccount(currencies, detailMarginAccount);
+        detailMarginAccount = await positionCalculator(fiat, currencies, detailMarginAccount);
+        responseCurrentSide = await currentSide(fiat, currencies, detailMarginAccount);
         if (responseCurrentSide == 'modified') {
-            await detailMarginAcc(fiat);
+            resolve(await detailMarginAcc(fiat));
         } else {
             resolve(responseCurrentSide);
         };
     });
 };
-
 
 /**
  * Ejecucion de ordenes de margin, en esquema ping-pong (o sea, la senial buy es para cerrar un short y abrir
@@ -468,15 +534,14 @@ const detailMarginAcc = fiat => {
  * @param {number} close - ultimo precio de cierre de la vela
  * @param {number} lot - lote asignado a la orden
  * @param {string} fiat - moneda base(usdt)
+ * @param {object} detailMarginAccount - 
+ * @param {object} currencies - 
  * @return {Promise}
  */
 let operation = 0; // contador de operaciones
-const order = (signal, symbol, close, lot, fiat) => {
+const order = (signal, symbol, close, lot, fiat, detailMarginAccount, currencies) => {
     return new Promise(async(resolve, reject) => {
         let minorQty,
-            responseDetailAccount,
-            resMarginMarketBuy = 0,
-            resMarginMarketSell = 0,
             quantity,
             qty;
 
@@ -490,10 +555,8 @@ const order = (signal, symbol, close, lot, fiat) => {
                 qty = await calcQuantity(close, lot);
                 quantity = formatQuantity(qty);
                 console.log(`symbol: ${symbol}, close: ${close}, calcQuantity: ${qty}, formatQuantity: ${quantity}`);
-                responseMarginBorrow = await marginBorrow(fiat, lot);
-                console.log(responseMarginBorrow);
-                resMarginMarketBuy = await marginMarketBuy(symbol, quantity); // quantity = quantityCurrency[symbol]
-                console.log(resMarginMarketBuy);
+                await marginBorrow(fiat, lot);
+                await marginMarketBuy(symbol, quantity); // quantity = quantityCurrency[symbol]
                 console.log(`----------------------------INIT OPEN LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
                 resolve(`success`);
             } else if (signal == 'sell') { // 1er operacion: prestamo crypto y short
@@ -502,10 +565,8 @@ const order = (signal, symbol, close, lot, fiat) => {
                 qty = await calcQuantity(close, lot);
                 quantity = formatQuantity(qty);
                 console.log(`symbol: ${symbol}, close: ${close}, calcQuantity: ${qty}, formatQuantity: ${quantity}`);
-                responseMarginBorrow = await marginBorrow(currencies[symbol], quantity); // quantity = quantityCurrency[symbol]
-                console.log(responseMarginBorrow);
-                responseMarginMarketSell = await marginMarketSell(symbol, quantity);
-                console.log(responseMarginMarketSell);
+                await marginBorrow(currencies[symbol], quantity); // quantity = quantityCurrency[symbol]
+                await marginMarketSell(symbol, quantity);
                 console.log(`----------------------------INIT OPEN SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
                 resolve(`success`);
             };
@@ -517,16 +578,12 @@ const order = (signal, symbol, close, lot, fiat) => {
                 qty = await calcQuantity(close, lot);
                 quantity = formatQuantity(qty);
                 console.log(`symbol: ${symbol}, close: ${close}, calcQuantity: ${qty}, formatQuantity: ${quantity}`);
-                responseMarginMarketBuy = await marginMarketBuy(symbol, detailMarginAccount[symbol]["borrowed"]);
-                console.log(responseMarginMarketBuy);
-                responseDetailAccount = await detailAccount(fiat);
-                minorQty = (responseDetailAccount[symbol]["borrowed"] <= responseDetailAccount[symbol]["free"]) ? responseDetailAccount[symbol]["borrowed"] : responseDetailAccount[symbol]["free"];
-                responseMarginRepay = await marginRepay(currencies[symbol], minorQty); // parseFloat(resMarginMarketBuy.executedQty) / parseFloat(resMarginMarketBuy.fills[0].qty)
-                console.log(responseMarginRepay);
-                responseMarginBorrow = await marginBorrow(fiat, lot);
-                console.log(responseMarginBorrow);
-                responseMarginMarketBuy = await marginMarketBuy(symbol, quantity);
-                console.log(responseMarginMarketBuy);
+                await marginMarketBuy(symbol, detailMarginAccount[symbol]["borrowed"]);
+                await detailAccount(currencies, detailMarginAccount);
+                minorQty = (detailMarginAccount[symbol]["borrowed"] <= detailMarginAccount[symbol]["free"]) ? detailMarginAccount[symbol]["borrowed"] : detailMarginAccount[symbol]["free"];
+                await marginRepay(currencies[symbol], minorQty); // parseFloat(resMarginMarketBuy.executedQty) / parseFloat(resMarginMarketBuy.fills[0].qty)
+                await marginBorrow(fiat, lot);
+                await marginMarketBuy(symbol, quantity);
                 console.log(`----------------------------OPEN LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
                 resolve(`success`);
 
@@ -536,16 +593,12 @@ const order = (signal, symbol, close, lot, fiat) => {
                 qty = await calcQuantity(close, lot);
                 quantity = formatQuantity(qty);
                 console.log(`symbol: ${symbol}, close: ${close}, calcQuantity: ${qty}, formatQuantity: ${quantity}`);
-                responseMarginMarketSell = await marginMarketSell(symbol, detailMarginAccount[symbol]["free"]);
-                console.log(responseMarginMarketSell);
-                responseDetailAccount = await detailAccount(fiat);
-                responseMarginRepay = await marginRepay(fiat, lot); // antes lot. lo que obtuve de vta parseFloat(resMarginMarketSell.cummulativeQuoteQty);
-                console.log(responseMarginRepay);
-                responseMarginBorrow = await marginBorrow(currencies[symbol], quantity);
-                console.log(responseMarginBorrow);
-                responseDetailAccount = await detailAccount(fiat);
-                responseMarginMarketSell = await marginMarketSell(symbol, responseDetailAccount[symbol]["free"]); // antes quantity
-                console.log(responseMarginMarketSell);
+                await marginMarketSell(symbol, detailMarginAccount[symbol]["free"]);
+                await detailAccount(currencies, detailMarginAccount);
+                await marginRepay(fiat, lot); // antes lot. lo que obtuve de vta parseFloat(resMarginMarketSell.cummulativeQuoteQty);
+                await marginBorrow(currencies[symbol], quantity);
+                await detailAccount(currencies, detailMarginAccount);
+                await marginMarketSell(symbol, detailMarginAccount[symbol]["free"]); // antes quantity
                 console.log(`----------------------------OPEN SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------\n`);
                 resolve(`success`);
             };
@@ -557,31 +610,8 @@ const order = (signal, symbol, close, lot, fiat) => {
 
 
 /**
- * Recupera de la API todas las monedas disponibles en el comercio de margen, y almacena su correspondiente
- * par contra USDT en el objeto marketsAvailable
- * @return {Promise} 
- */
-const marginMarketsAvailable = () => {
-    return new Promise(async(resolve, reject) => {
-        await binance.mgAccount((error, response) => {
-            if (error) return console.warn(error);
-
-            response.userAssets.map((curr, idx, src) => {
-                // console.log(curr.asset); //currency
-                // console.log(curr.asset.concat('', 'USDT')); // symbol
-                if (curr.asset != 'USDT' && curr.asset != 'BNB' && curr.asset != 'BCHA') {
-                    marketsAvailable[curr.asset.concat('', 'USDT')] = curr.asset;
-                };
-            });
-            resolve(marketsAvailable);
-        });
-    });
-};
-
-
-/**
  * Procesa los datos del backtesting(objDataBackTesting) realizado a todos los pares disponibles en el comercio de margen, 
- * y elige la cantidad establecida(magicAmmount) con mejores rentabilidades, para agregarlas al array markets previamente vacio.
+ * y elige la cantidad establecida(magicAmmount) con mejores rentabilidades, para agregarlas al array markets previamente vaciado.
  * El array markets es donde se almacenan los pares que opera el bot.
  * @param {number} magicAmmount - cantidad de pares que desea que opere el bot
  * @param {object} objDataBackTesting - obj que contiene los datos del backtesting realizado a todos los pares
@@ -590,6 +620,7 @@ const marginMarketsAvailable = () => {
  */
 const magic = (magicAmmount, objDataBackTesting, markets) => {
     return new Promise((resolve, reject) => {
+
         marketsObj = new Array;
         markets = [];
         let totalOp = 0,
@@ -613,10 +644,11 @@ const magic = (magicAmmount, objDataBackTesting, markets) => {
                 profitSum += objDataBackTesting[idx].totalProfitPercent;
             };
         };
+
         totalSuccessPercent = (totalWin * 100) / totalOp; // % aciertos
         profit = profitSum / magicAmmount;
 
-        console.log("\n===========================================================");
+        console.log("\n\n===========================================================");
         console.log(`Magic has chosen, Markets[${markets.length}]: ${markets}`);
         console.log("===========================================================");
         console.log(`Total Operations: ${totalOp}`);
@@ -629,20 +661,29 @@ const magic = (magicAmmount, objDataBackTesting, markets) => {
     });
 };
 
-let currencies = new Object; // obj que contiene moneda : par (ETH : ETHUSDT)
-let detailMarginAccount = {}; // obj que contiene los detalles de la cuenta de margen
-let marketsAvailable = new Object; // obj que contiene todos los pares disponibles en el comercio de margen
-let inputHistoryCandlestick = {}; // obj con los datos del historico de velas
+
 
 //-------------------------------------------------------------------------------------------------------------------------------//
+
+
+let inputHistoryCandlestick = {}; // obj con los datos del historico de velas
+// ej:
+// {
+// ALGOUSDT: {
+//     open: [],
+//     close: [],
+//     high: [],
+//     low: []
+//   }
+// }
 
 /**
  * Funcion iife donde converge la logica.
  * @param {object} binance - conexion a binance
  */
-const trading = (async _ => {
+const trading = (async _ => { // 206.4
     try {
-        let markets = ["BTCUSDT", "ETHUSDT", "ADAUSDT"], // pares a operar por el bot, si flagOnMagic es true entonces esto sera ignorado
+        let markets = ['ETHUSDT', 'ADAUSDT', 'BTCUSDT'], // pares a operar por el bot, si flagOnMagic es true entonces esto sera ignorado
             timeFrame = "15m", // intervalo de las velas    
             fiat = "USDT", // default: USDT || moneda base
             lot = 15.00, // valor lote en fiat (USDT)
@@ -650,8 +691,11 @@ const trading = (async _ => {
             closeAllPosition = false, // default false || vende las posiciones y repaga los prestamos existentes, dejando los pares en cero al arranque de la app
             flagBackTesting = true, // default: false || inicia backtesting
             invertSignal = false, // default: false || invierte la senal (ej: si es 'buy' se convierte a 'sell', idem si es 'sell') || falta implementarlo con el backtesting
-            flagOnMagic = false, // default: false || elige las monedas de forma automatizada
-            magicAmmount = 3; // cantidad de monedas que elegira la opcion flagOnMagic para operar
+            flagOnMagic = false, // default: false || a partir de todos los pares en margen, elige las monedas de forma automatizada y con mejores rendimiento basado en backtesting
+            magicAmmount = 20, // cantidad de monedas que elegira la opcion flagOnMagic para operar
+            currencies = {}, // obj que contiene los nombres de las monedas, // ej: { USDT: 'USDT', ONTUSDT: 'ONT', THETAUSDT: 'THETA', ALGOUSDT: 'ALGO' }
+            detailMarginAccount = {}; // obj que contiene los detalles de la cuenta de margen
+
 
         console.log("***Abechennon Margin Trader-Bot Binance*** \n");
         console.log(`TimeFrame: ${timeFrame} | Lot Usdt: ${lot} | Start: ${start} | Magic: ${flagOnMagic} \n`);
@@ -665,61 +709,73 @@ const trading = (async _ => {
 
         // activar magic
         if (flagOnMagic == true) {
-            await marginMarketsAvailable(); // obtiene de la API los pares disponibles en el comercio de margen
-            await historyCandlesticks(Object.keys(marketsAvailable), timeFrame); // recupera de la API el historico de velas
-            await detailMarginAcc(fiat); // recupera de la API los datos de la cuenta de margen
-
-            // procesamiento para obtener resultados del backtesting
-            for (let symbol in marketsAvailable) {
-                let dataBackTesting = await classicRsi(curr, inputHistoryCandlestick[curr], invertSignal, true, 14, 30, 70); // obtiene seniales de la estrategia
-                await backTesting(dataBackTesting); // se calculan rentabilidades
-            };
-            markets = await magic(magicAmmount, resDataBackTesting); // elige los mejores pares
-            // console.log(markets);
-        } else {
-            buildNameCurrency(markets); // 
+            currencies = await marginMarketsAvailable(currencies); // genera un obj con los nombres de TODAS las monedas a partir de consulta a la API| (-'BCHA')
+            markets = await buildMarketsSymbol(currencies, markets);
             await historyCandlesticks(markets, timeFrame); // recupera de la API el historico de velas
-            await detailMarginAcc(fiat); // recupera de la API los datos de la cuenta de margen
-        };
+            await detailMarginAcc(fiat, currencies, detailMarginAccount); // recupera de la API los datos de la cuenta de margen
 
+            let resultBackTesting;
+            // procesamiento para obtener resultados del backtesting
+            for await (symbol of markets) {
+                // let dataBackTesting = await waves(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 25);  // si usted no soy yo, esta linea borrela (es una funcion de estrategia experimental y personal, no incluida en Git)
+                let dataBackTesting = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 14, 30, 70); // obtiene seniales de la estrategia
+                resultBackTesting = await backTesting(dataBackTesting); // se calculan rentabilidades
+            };
+            // console.log(resultBackTesting);
+
+            markets = await magic(magicAmmount, resDataBackTesting, markets); // elige los mejores pares
+            currencies = await buildNameCurrency(markets, currencies); // a partir de markets construye el obj currencies
+
+        } else {
+            currencies = buildNameCurrency(markets, currencies); // genera un obj con los nombres de las monedas a partir del array markets, ej: { USDT: 'USDT', ONTUSDT: 'ONT', THETAUSDT: 'THETA', ALGOUSDT: 'ALGO' }
+            await historyCandlesticks(markets, timeFrame); // recupera de la API el historico de velas. Itera en array markets
+            await detailMarginAcc(fiat, currencies, detailMarginAccount); // recupera de la API los datos de la cuenta de margen | 1. itera currencies | 2 y 3. Itera currencies(- 'USDT', 'BNB', 'BCHA')
+        };
 
         // cerrar todas las posiciones (las que esten en el array markets)
         if (closeAllPosition == true) {
             console.log(`- Close all position: true !`);
             let resMarginRepayFiat;
-            let rescloseAllCryptoPosition = await closeAllCryptoPosition(fiat);
+            let rescloseAllCryptoPosition = await closeAllCryptoPosition(fiat, detailMarginAccount, currencies);
             if (detailMarginAccount[fiat]["borrowed"] > 0) {
                 resMarginRepayFiat = await marginRepay(fiat, detailMarginAccount[fiat]["borrowed"]);
             };
             if (rescloseAllCryptoPosition == 'modified' || resMarginRepayFiat == 'modified') {
-                await detailMarginAcc(fiat);
+                await detailMarginAcc(fiat, currencies, detailMarginAccount);
             };
         };
 
+        let resultBackTesting;
         // activar backtesting (las que esten en el array markets)
         if (flagBackTesting == true) {
-            markets.forEach(async(curr) => {
-                let dataBackTesting = await classicRsi(curr, inputHistoryCandlestick[curr], invertSignal, true, 14, 30, 70); // obtiene seniales de la estrategia
-                await backTesting(dataBackTesting); // se calculan rentabilidades
-            });
+            for await (let symbol of markets) {
+                let dataBackTesting = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 14, 30, 70); // obtiene seniales de la estrategia
+                // let dataBackTesting = await waves(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 25); // si usted no soy yo, esta linea borrela (es una funcion de estrategia experimental y personal, no incluida en Git)
+                resultBackTesting = await backTesting(dataBackTesting); // se calculan rentabilidades
+            };
+            console.log(resultBackTesting);
 
         };
 
         console.log(`- Waiting for signal every: ${timeFrame}... \n`);
 
 
+        // console.log(inputHistoryCandlestick)
+        // console.log(currencies);
+        // console.log(detailMarginAccount);
+        // console.log(marketsAvailable);
 
         let runOrder = false; // control de flujo entre websocket.candlesticks e interval
         let final = 0; // control de flujo entre websocket.candlesticks e interval
 
         // websocket recupera de la API los datos de las velas
-        await binance.websockets.candlesticks(markets, timeFrame, async(candlesticks) => {
+        let wsCandlesticks = await binance.websockets.candlesticks(markets, timeFrame, async(candlesticks) => {
             let { e: eventType, E: eventTime, s: symbol, k: ticks } = candlesticks;
             let { o: open, h: high, l: low, c: close, v: volume, n: trades, i: interval, x: isFinal, q: quoteVolume, V: buyVolume, Q: quoteBuyVolume } = ticks;
 
             if (isFinal == true && runOrder == false) {
                 final += 1;
-                // console.log(`final: ${final}`);
+
                 await updatedHistoryCandlesticks(candlesticks);
                 if (final == markets.length) {
                     runOrder = true;
@@ -731,16 +787,19 @@ const trading = (async _ => {
 
         // escucha al websocket para ejecutar las ordenes de comercio cuando corresponda
         interval(async() => {
-            if (runOrder == true) {
+            // console.log(wsCandlesticks); // response: "xxxxxxxxxx" (id tipo number de 10 digitos)
 
+            if (runOrder == true) {
                 for await (let symbol of markets) {
                     let { open, close, high, low, booleanIsFinal } = inputHistoryCandlestick[symbol]; // ultimo close del array: close[close.length-1]
-                    let signal = await classicRsi(curr, inputHistoryCandlestick[curr], invertSignal, false, 14, 30, 70); // obtiene seniales de la estrategia
+                    let signal = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, false, 14, 30, 70); // obtiene seniales de la estrategia
+                    // let signal = await waves(symbol, inputHistoryCandlestick[symbol], invertSignal, false, 25); // si usted no soy yo, esta linea borrela (es una funcion de estrategia experimental y personal, no incluida en Git)
+
                     if (start == true && signal !== undefined) {
-                        await order(signal, symbol, close[close.length - 1], lot, fiat);
-                        await detailMarginAcc(fiat);
-                        console.log(detailMarginAccount.USDT);
-                        console.log(detailMarginAccount[symbol]);
+                        await order(signal, symbol, close[close.length - 1], lot, fiat, detailMarginAccount, currencies);
+                        await detailMarginAcc(fiat, currencies, detailMarginAccount);
+                        // console.log(detailMarginAccount.USDT);
+                        // console.log(detailMarginAccount[symbol]);
                     };
                 };
                 final = 0;

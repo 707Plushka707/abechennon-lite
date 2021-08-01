@@ -118,16 +118,14 @@ const backTesting = src => {
             };
         });
 
-
         let totalOperation = winners + losers;
         let success = (winners * 100) / totalOperations; // % aciertos
-        let profitAverageLoss = profitLoss / losers;
-        let profitAveragewin = profitWin / winners;
+        // console.log("\n===========================================================");
+        // console.log(`Symbol: ${symbol}`);
         // console.log(`Total Operations: ${totalOperation} (Counter, Buy: ${buy}| Sell: ${sell})`);
         // console.log(`Winners: ${winners}, Losers: ${losers}`);
         // console.log(`Success: % ${success}`);
         // console.log(`Total Profit: % ${totalProfit}`);
-        // console.log("=========================================================== \n");
 
         dataBackTesting = {
             symbol: symbol,
@@ -139,6 +137,10 @@ const backTesting = src => {
         };
 
         resDataBackTesting.push(dataBackTesting);
+
+        resDataBackTesting.sort((a, b) => {
+            return (b.totalProfitPercent - a.totalProfitPercent);
+        });
 
         resolve(resDataBackTesting);
     });
