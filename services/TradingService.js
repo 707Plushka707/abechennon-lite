@@ -9,11 +9,14 @@
 
 
 const { response } = require('express');
-const binance = require('./config/exchange');
+const binance = require('../config/exchange');
 const util = require('util') // console.log(util.inspect(array, { maxArrayLength: null }));
-const { backTesting, resDataBackTesting } = require('./backTesting');
+const { backTesting, resDataBackTesting } = require('./BackTestingService');
+// const classicRsi = require('./strategy/strategyRsi');
+const classicRsi = require('./pStrategy/strategyRsi');
+const classicRsiWithCrossover = require('./pStrategy/strategyRsiWithCrossover')
 const waves = require('./pStrategy/strategyWaves');
-const classicRsi = require('./strategy/strategyRsi');
+const strategyAdxRsi = require('./pStrategy/strategyAdxRsi');
 const interval = require('interval-promise');
 
 
@@ -36,6 +39,7 @@ const workPromiseInputHistoryCandlestick = (symbol, timeFrame) => {
                 inputHistoryCandlestick[symbol].high.push(parseFloat(curr[2]));
                 inputHistoryCandlestick[symbol].low.push(parseFloat(curr[3]));
                 inputHistoryCandlestick[symbol].close.push(parseFloat(curr[4]));
+                inputHistoryCandlestick[symbol].volume.push(parseFloat(curr[5]));
             });
             resolve(ticks);
         });
@@ -58,7 +62,8 @@ const historyCandlesticks = (markets, timeFrame) => {
                 open: [],
                 close: [],
                 high: [],
-                low: []
+                low: [],
+                volume: []
             };
             promiseInputHistoryCandlestick.push(workPromiseInputHistoryCandlestick(symbol, timeFrame));
         });
@@ -82,10 +87,12 @@ const updatedHistoryCandlesticks = candlesticks => {
         inputHistoryCandlestick[symbol].close.shift();
         inputHistoryCandlestick[symbol].high.shift();
         inputHistoryCandlestick[symbol].low.shift();
+        inputHistoryCandlestick[symbol].volume.shift();
         inputHistoryCandlestick[symbol].open.push(parseFloat(open));
         inputHistoryCandlestick[symbol].close.push(parseFloat(close));
         inputHistoryCandlestick[symbol].high.push(parseFloat(high));
         inputHistoryCandlestick[symbol].low.push(parseFloat(low));
+        inputHistoryCandlestick[symbol].volume.push(parseFloat(volume));
 
         resolve(inputHistoryCandlestick);
         if (error) reject(error);
@@ -673,7 +680,8 @@ let inputHistoryCandlestick = {}; // obj con los datos del historico de velas
 //     open: [],
 //     close: [],
 //     high: [],
-//     low: []
+//     low: [],
+//     volume: []
 //   }
 // }
 
@@ -683,7 +691,8 @@ let inputHistoryCandlestick = {}; // obj con los datos del historico de velas
  */
 const trading = (async _ => { // 206.4
     try {
-        let markets = ['ETHUSDT', 'ADAUSDT', 'BTCUSDT'], // pares a operar por el bot, si flagOnMagic es true entonces esto sera ignorado
+        let markets = ['WAVESUSDT', 'XLMUSDT', 'KAVAUSDT', 'SOLUSDT', 'CRVUSDT', 'KSMUSDT', 'DOTUSDT', 'YFIIUSDT', 'CHZUSDT', 'FTMUSDT', 'NEARUSDT', 'TFUELUSDT', 'DASHUSDT', 'IOSTUSDT', 'ZILUSDT', 'OMGUSDT', 'QTUMUSDT', 'EOSUSDT', 'SXPUSDT', 'ETCUSDT'], // pares a operar por el bot, si flagOnMagic es true entonces esto sera ignorado
+            // let markets = ['BTCUSDT'], // pares a operar por el bot, si flagOnMagic es true entonces esto sera ignorado
             timeFrame = "15m", // intervalo de las velas    
             fiat = "USDT", // default: USDT || moneda base
             lot = 15.00, // valor lote en fiat (USDT)
@@ -717,8 +726,9 @@ const trading = (async _ => { // 206.4
             let resultBackTesting;
             // procesamiento para obtener resultados del backtesting
             for await (symbol of markets) {
-                // let dataBackTesting = await waves(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 25);  // si usted no soy yo, esta linea borrela (es una funcion de estrategia experimental y personal, no incluida en Git)
                 let dataBackTesting = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 14, 30, 70); // obtiene seniales de la estrategia
+                // let dataBackTesting = await classicRsiWithCrossover(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 14, 30, 70);
+                // let dataBackTesting = await strategyAdxRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 3, 15, 85, 14, 35);
                 resultBackTesting = await backTesting(dataBackTesting); // se calculan rentabilidades
             };
             // console.log(resultBackTesting);
@@ -750,7 +760,16 @@ const trading = (async _ => { // 206.4
         if (flagBackTesting == true) {
             for await (let symbol of markets) {
                 let dataBackTesting = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 14, 30, 70); // obtiene seniales de la estrategia
-                // let dataBackTesting = await waves(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 25); // si usted no soy yo, esta linea borrela (es una funcion de estrategia experimental y personal, no incluida en Git)
+                // let dataBackTesting = await classicRsiWithCrossover(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 3, 15, 85);
+
+                /**
+                 * si usted no soy yo, las siguientes lineas de estrategia no le sirven (son funciones 
+                 * de estrategia experimental y personal, no incluida en Git)
+                 */
+                // let dataBackTesting = await strategyAdxRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 3, 15, 85, 14, 25, 7, 30, 20); // (symbol, src, invertSignal = false, backTesting = false, lengthRsi, oversold, overbought, lengthAdx, signalAdx, lengthSmaCloseSlow, lengthSmaCloseFast, lengthSmaVolume)
+                // let dataBackTesting = await waves(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 25); 
+
+                // console.log(dataBackTesting);
                 resultBackTesting = await backTesting(dataBackTesting); // se calculan rentabilidades
             };
             console.log(resultBackTesting);
@@ -759,8 +778,7 @@ const trading = (async _ => { // 206.4
 
         console.log(`- Waiting for signal every: ${timeFrame}... \n`);
 
-
-        // console.log(inputHistoryCandlestick)
+        // console.log(util.inspect(inputHistoryCandlestick, { maxArrayLength: null }));
         // console.log(currencies);
         // console.log(detailMarginAccount);
         // console.log(marketsAvailable);
@@ -793,9 +811,9 @@ const trading = (async _ => { // 206.4
                 for await (let symbol of markets) {
                     let { open, close, high, low, booleanIsFinal } = inputHistoryCandlestick[symbol]; // ultimo close del array: close[close.length-1]
                     let signal = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, false, 14, 30, 70); // obtiene seniales de la estrategia
-                    // let signal = await waves(symbol, inputHistoryCandlestick[symbol], invertSignal, false, 25); // si usted no soy yo, esta linea borrela (es una funcion de estrategia experimental y personal, no incluida en Git)
 
                     if (start == true && signal !== undefined) {
+                        flagUpdateDetailMarginAccount = true;
                         await order(signal, symbol, close[close.length - 1], lot, fiat, detailMarginAccount, currencies);
                         await detailMarginAcc(fiat, currencies, detailMarginAccount);
                         // console.log(detailMarginAccount.USDT);

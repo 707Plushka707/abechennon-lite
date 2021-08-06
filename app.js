@@ -4,7 +4,7 @@ const app = express();
 // const path = require('path');
 require('./config/config');
 const { dbConnection } = require('./config/db');
-require('./trading');
+require('./services/TradingService');
 
 dbConnection();
 

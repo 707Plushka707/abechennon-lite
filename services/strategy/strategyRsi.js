@@ -2,10 +2,11 @@ const util = require('util') // console.log(util.inspect(array, { maxArrayLength
 const RSI = require('technicalindicators').RSI;
 
 
-const classicRsi = (symbol, src, invertSignal = false, backTesting = false, length, oversold, overbought) => {
+const classicRsi = (symbol, src, invertSignal = false, backTesting = false, lengthRsi, oversold, overbought) => {
     return new Promise((resolve, reject) => {
         let { open, close, high, low } = src,
-        arrayPointRsi = RSI.calculate({ values: close, period: length }),
+        inputRsi = { values: close, period: lengthRsi },
+            arrayPointRsi = RSI.calculate(inputRsi),
             flagBuy = false,
             flagSell = false,
             signal,
@@ -15,7 +16,7 @@ const classicRsi = (symbol, src, invertSignal = false, backTesting = false, leng
 
         src.close.map((curr, idx, p) => {
             let i = 499 - idx; // es el indice pero al reves, sirve para ubicarnos en tradingview
-            let rsi = arrayPointRsi[idx - length]; // sincronizacion del indice de los cierres con el indice del rsi
+            let rsi = arrayPointRsi[idx - lengthRsi]; // sincronizacion del indice de los cierres con el indice del rsi
             signal = undefined;
 
             if (flagBuy == false && rsi < oversold) {
@@ -25,11 +26,11 @@ const classicRsi = (symbol, src, invertSignal = false, backTesting = false, leng
                 if (invertSignal == false && backTesting == false) {
                     signal = 'buy';
                 } else if (invertSignal == false && backTesting == true) {
-                    objectPoint[symbol][`Buy_${idx}-${i}`] = curr;
+                    objectPoint[symbol][`Buy_${idx}-${i}_Trigger: RSI: ${rsi}`] = curr;
                 } else if (invertSignal == true && backTesting == false) {
                     signal = 'sell';
                 } else if (invertSignal == true && backTesting == true) {
-                    objectPoint[symbol][`Sell_${idx}-${i}`] = curr;
+                    objectPoint[symbol][`Sell_${idx}-${i}_Trigger: RSI: ${rsi}`] = curr;
                 };
 
             } else if (flagSell == false && rsi > overbought) {
@@ -39,11 +40,11 @@ const classicRsi = (symbol, src, invertSignal = false, backTesting = false, leng
                 if (invertSignal == false && backTesting == false) {
                     signal = 'sell';
                 } else if (invertSignal == false && backTesting == true) {
-                    objectPoint[symbol][`Sell_${idx}-${i}`] = curr;
+                    objectPoint[symbol][`Sell_${idx}-${i}_Trigger: RSI: ${rsi}`] = curr;
                 } else if (invertSignal == true && backTesting == false) {
                     signal = 'buy';
                 } else if (invertSignal == true && backTesting == true) {
-                    objectPoint[symbol][`Buy_${idx}-${i}`] = curr;
+                    objectPoint[symbol][`Buy_${idx}-${i}_Trigger: RSI: ${rsi}`] = curr;
                 };
             };
         });

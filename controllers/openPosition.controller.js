@@ -1,4 +1,4 @@
-const Order = require('../model/Order');
+const OpenPosition = require('../model/OpenPosition');
 
 // const display = (req, res) => {
 //     Order.find({}, (error, orders) => {
@@ -13,12 +13,12 @@ const Order = require('../model/Order');
 // module.exports = { display }
 
 module.exports.display = (req, res) => {
-    Order.find({}, (error, orders) => {
+    OpenPosition.find({}, (error, orders) => {
         if (error) {
             return res.status(500).json({
-                message: 'error mostrando las ordenes'
+                message: 'error mostrando las posiciones'
             });
         };
-        console.log(orders);
+        console.log(posicion);
     });
 };
