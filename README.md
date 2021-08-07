@@ -32,6 +32,19 @@ let signal = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSig
 
 * 'strategy.js', crear su estrategia o usar las que esten en esa ubicacion (actualmente, solo y por default strategyRsi.js)
 
+-------------------------------------------------------------------------------------------------
+***IMPORATANTE:
+El modulo 'node-binance-api' (modulo externo a abechennon) presenta un error desde aproximadamente 30/04/2021, ya fue notificado en el correspoondiente repositorio del proyecto, pero aun no fue fixeado, por lo tanto luego de realizar el npm install debera fixear el modulo 'node-binance-api' manualmente, siguiendo los siguientes pasos. 
+
+Ubiquese en el archivo:
+ /node_modules/node-binance-api/node-binance-api.js
+
+y reemplaze la linea 4686 por la siguente linea:
+
+const endpoint = 'v1/margin' + (isIsolated?'/isolated':'') + '/account'
+
+-------------------------------------------------------------------------------------------------
+
 Nota: BNB no se debe operar, ya que actualmente esta configurado para no tenerlo en cuenta (por que se lo usa para pagar los intereses de los prestamos y las comisiones).
 
 Ruta de desarrollo para el back-end: 
