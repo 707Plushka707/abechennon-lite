@@ -3,7 +3,6 @@ const { prevPrice, percent } = require('./utils');
 const { waves, wavesBackTesting } = require('./pStrategy/strategyWaves');
 const classicRsi = require('./strategy/strategyRsi');
 
-
 // [
 //     [ 'Buy_2-497', 0.6298 ],
 //     [ 'Sell_39-460', 0.6291 ],
@@ -43,6 +42,7 @@ const backTesting = src => {
             totalOperations = 0,
             winners = 0,
             losers = 0,
+            close = false,
             profitLoss = 0,
             profitWin = 0,
             buy = 0, // contador buy
@@ -59,7 +59,9 @@ const backTesting = src => {
             let previousPrice = prevPrice(ix, arrayOperation);
             let currentPrice = arrayOperation[ix][1];
 
-            if (operation[0].includes('Buy') && previousPrice != 0) {
+
+
+            if (operation[0].includes('buy') && previousPrice != 0 && close == false) {
                 buy += 1;
                 totalOperations += 1;
                 fee = percent(currentPrice, percentFee);
@@ -88,7 +90,7 @@ const backTesting = src => {
                 // console.log("-----------------------------------------------------------");
 
 
-            } else if (operation[0].includes('Sell') && previousPrice != 0) {
+            } else if (operation[0].includes('sell') && previousPrice != 0 && close == false) {
                 sell += 1;
                 totalOperations += 1;
                 fee = percent(currentPrice, percentFee);
@@ -115,11 +117,46 @@ const backTesting = src => {
                 // console.log(`% Total: ${totalProfit}`);
                 // console.log("-----------------------------------------------------------");
 
+            } else if (operation[0].includes('close') && previousPrice != 0) {
+                close = true;
+                // totalOperations += 1;
+                fee = percent(currentPrice, percentFee);
+                profitParcial = (currentPrice - previousPrice) - fee;
+                profit += profitParcial;
+                parcialPercent = (((currentPrice / previousPrice) * 100) - 100) - percentFee;
+                totalProfit += parcialPercent;
+                if (Math.sign(profitParcial) == 1) {
+                    winners += 1;
+                    result = 'WINNER';
+                    profitWin += profitParcial;
+                } else if (Math.sign(profitParcial) == -1) {
+                    losers += 1;
+                    result = 'LOSER';
+                    profitLoss += profitParcial;
+                };
+
+                // console.log(`ix: ${ix} || ${result} || Winners: ${winners}, Losers: ${losers}`);
+                // console.log("Close: " + arrayOperation[ix][0]);
+                // console.log(`Compra: ${previousPrice}, Venta: ${currentPrice}. Fee: ${fee}`);
+                // console.log(`Profit parcial: ${profitParcial}`);
+                // console.log(`Profit Total: ${profit}`);
+                // console.log(`% Parcial: ${parcialPercent}`);
+                // console.log(`% Total: ${totalProfit}`);
+                // console.log("-----------------------------------------------------------");
+
+            } else if (operation[0].includes('buy') && previousPrice != 0 && close == true) {
+                close == false;
+                totalOperations += 1;
+            } else if (operation[0].includes('sell') && previousPrice != 0 && close == true) {
+                close == false;
+                totalOperations += 1;
             };
+
+
         });
 
         let totalOperation = winners + losers;
-        let success = (winners * 100) / totalOperations; // % aciertos
+        let success = (winners * 100) / (winners + losers); // % aciertos
         // console.log("\n===========================================================");
         // console.log(`Symbol: ${symbol}`);
         // console.log(`Total Operations: ${totalOperation} (Counter, Buy: ${buy}| Sell: ${sell})`);
@@ -136,6 +173,27 @@ const backTesting = src => {
             totalProfitPercent: totalProfit,
         };
 
+        // if (resDataBackTesting.length > 0) {
+        //     resDataBackTesting.forEach((curr, idx, pos) => {
+        //         let push;
+        //         // console.log(`symbol: ${symbol}. curr.symbol: ${curr.symbol}`);
+
+        //         if (symbol == curr.symbol) {
+        //             push = false;
+        //         } else {
+        //             push = true;
+        //         };
+        //         if (push == true) {
+        //             // console.log(push)
+        //             resDataBackTesting.push(dataBackTesting);
+        //         };
+
+        //     });
+        // } else {
+        //     resDataBackTesting.push(dataBackTesting);
+        // };
+
+
         resDataBackTesting.push(dataBackTesting);
 
         resDataBackTesting.sort((a, b) => {
@@ -145,5 +203,5 @@ const backTesting = src => {
         resolve(resDataBackTesting);
     });
 };
-
+// module.exports = { backTesting };
 module.exports = { backTesting, resDataBackTesting };

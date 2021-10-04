@@ -1,5 +1,6 @@
 const util = require('util') // expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
 
+
 // Recibe un array. Devuelve la diferencia hacia arriba de sus elementos. Si alguno de sus valores es undefined, retorna 0
 const changeUp = (i, src) => {
     try {
@@ -106,4 +107,14 @@ const percent = (curr, percent) => {
     };
 };
 
-module.exports = { changeUp, changeDown, srcLength, sumArray, max, prevPrice, percent };
+// Recibe dos valores y devuelve la diferencia en %
+const difPercent = (firstValue, secondValue) => {
+    try {
+        return Math.abs(((firstValue - secondValue) / firstValue) * 100);
+
+    } catch (error) {
+        console.log(error);
+    };
+};
+
+module.exports = { changeUp, changeDown, srcLength, sumArray, max, prevPrice, percent, difPercent };

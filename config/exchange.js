@@ -5,8 +5,8 @@ require('dotenv').config();
  * Conexion a binance
  */
 const binance = new Binance().options({
-    APIKEY: process.env.DEVAPIKEY,
-    APISECRET: process.env.DEVAPISECRET,
+    APIKEY: process.env.APIKEY,
+    APISECRET: process.env.APISECRET,
     // 'test': true
 });
 

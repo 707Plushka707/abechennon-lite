@@ -22,29 +22,31 @@ const classicRsi = (symbol, src, invertSignal = false, backTesting = false, leng
             if (flagBuy == false && rsi < oversold) {
                 flagBuy = true;
                 flagSell = false;
-
-                if (invertSignal == false && backTesting == false) {
-                    signal = 'buy';
-                } else if (invertSignal == false && backTesting == true) {
-                    objectPoint[symbol][`Buy_${idx}-${i}_Trigger: RSI: ${rsi}`] = curr;
-                } else if (invertSignal == true && backTesting == false) {
+                if (invertSignal == true) {
                     signal = 'sell';
-                } else if (invertSignal == true && backTesting == true) {
-                    objectPoint[symbol][`Sell_${idx}-${i}_Trigger: RSI: ${rsi}`] = curr;
+                } else {
+                    signal = 'buy';
+                };
+
+                if (backTesting == false) {
+                    signal;
+                } else if (backTesting == true) {
+                    objectPoint[symbol][`${signal}_${idx}-${i}_Trigger: RSI: ${rsi}`] = curr;
                 };
 
             } else if (flagSell == false && rsi > overbought) {
                 flagBuy = false;
                 flagSell = true;
-
-                if (invertSignal == false && backTesting == false) {
-                    signal = 'sell';
-                } else if (invertSignal == false && backTesting == true) {
-                    objectPoint[symbol][`Sell_${idx}-${i}_Trigger: RSI: ${rsi}`] = curr;
-                } else if (invertSignal == true && backTesting == false) {
+                if (invertSignal == true) {
                     signal = 'buy';
-                } else if (invertSignal == true && backTesting == true) {
-                    objectPoint[symbol][`Buy_${idx}-${i}_Trigger: RSI: ${rsi}`] = curr;
+                } else {
+                    signal = 'sell';
+                };
+
+                if (backTesting == false) {
+                    signal;
+                } else if (backTesting == true) {
+                    objectPoint[symbol][`${signal}_${idx}-${i}_Trigger: RSI: ${rsi}`] = curr;
                 };
             };
         });
