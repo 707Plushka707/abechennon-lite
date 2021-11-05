@@ -4,7 +4,7 @@
 Es un bot de trading para el exchange ```Binance```, en desarrollo con node js. Abechennon opera a traves del comercio de margin, por lo tanto puede hacer uso del apalancaminto que ofrece Binance y operar tanto en operaciones en largos o cortos (long/short).
 
 ## Como funciona?
-El bot espera la senial de la estrategia y la ejecuta, la seniales pueden ser "buy", "sell" y "close" para cerrar posiciones existentes.
+El bot consume una api externa llamada node-binance-api, la cual usa para comunicarse al exchange binance y asi obtener datos y enviar las ordenes. Por otra lado el bot obtiene las senales a traves de los algoritmos disenados en la estrategia, la estrategia genera las senales que pueden ser "buy", "sell" y "close" (para cerrar posiciones existentes). Una vez que se dispare alguna senal el bot ejecutara la orden que corresponde, si se dispara la senal "buy" se enviara una orden para un prestamo en fiat y luego se comprara el par que disparo la senal, en el caso de "sell" se ejecuta una orden de prestamo de la cryptodivisa y posteriormente se vendera, y si la senal es "close" se vende/compra segun la posicion abierta existente y se reepaga el prestamo existente.
 
 ## Lo puede usar?
 Claro, actualmente el desarrollo del back-end ya se encuentra avanzado y con las caracteristicas minimas requeridas, por lo cual puede lanzarlo a traves de la terminal/consola para su operacion. Pero unicamente desarrolladores estaran capacitados para su uso ya que el front-end aun no fue desarrollado y la unica manera de cargar la informacion y editar/crear la estrategias sera a traves de la edicion del proyecto en un IDE.
@@ -37,7 +37,7 @@ Puede consultar mas estrategias en ```https://github.com/pablob206/abechennon-st
 Ubiquese en el archivo:
 $ /node_modules/node-binance-api/node-binance-api.js
 
-Y reemplaze la linea 4686 por la siguente linea:
+Busque la funcion "mgAccount" Y reemplaze la linea correspondiente a "const endpoint =" por la siguente linea:
 $ const endpoint = 'v1/margin' + (isIsolated?'/isolated':'') + '/account'
 ```
 -------------------------------------------------------------------------------------------------

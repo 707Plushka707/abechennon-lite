@@ -3,10 +3,12 @@ const app = express();
 
 // const path = require('path');
 require('./config/config');
+
 const { dbConnection } = require('./config/db');
+dbConnection();
+
 require('./services/TradingService');
 
-dbConnection();
 
 app.set('view engine', 'ejs');
 
