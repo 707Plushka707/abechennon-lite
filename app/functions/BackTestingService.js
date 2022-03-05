@@ -1,7 +1,7 @@
 const util = require('util') // util.inspect expandir items del console.log => console.log(util.inspect(array, { maxArrayLength: null }));
 const { prevPrice, percent } = require('./utils');
 const { waves, wavesBackTesting } = require('./pStrategy/strategyWaves');
-const classicRsi = require('./strategy/strategyRsi');
+const classicRsi = require('./abechennon-strategies/strategyRsi');
 
 // [
 //     [ 'Buy_2-497', 0.6298 ],

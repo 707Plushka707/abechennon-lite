@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const OpenPositionController = require('../controllers/openPosition.controller');
+const OpenPositionController = require('../../controllers/openPosition.controller');
 
 router.get("/", OpenPositionController.display);
 router.get("/", OpenPositionController.apiGetAllPositions);

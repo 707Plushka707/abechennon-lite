@@ -2,12 +2,12 @@ const express = require('express');
 const app = express();
 
 // const path = require('path');
-require('./config/config');
+require('./app/config/config');
 
-const { dbConnection } = require('./config/db');
+const { dbConnection } = require('./app/config/db/instanceDb');
 // dbConnection();
 
-require('./services/TradingService');
+require('./app/functions/TradingService');
 
 
 // app.set('view engine', 'ejs');

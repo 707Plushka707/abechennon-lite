@@ -156,10 +156,9 @@ const updatedHistoryCandlesticksRealTimeData = candlesticks => {
  * @return {number} - 
  */
 const calcQuantity = (close, lot) => {
-    let quantity = (lot - 1) / close; // experimental: -1 a lot para que no este tan ajustado los prestamos
+    let quantity = (lot) / close; // experimental: -1 a lot para que no este tan ajustado los prestamos
 
     return quantity;
-
 };
 
 
@@ -254,8 +253,8 @@ const marginMarketsAvailable = currencies => {
                     currencies[curr.asset.concat('', 'USDT')] = curr.asset;
                 };
             });
-            resolve(currencies);
 
+            resolve(currencies);
         });
     });
 };
@@ -351,17 +350,30 @@ const positionCalculator = (fiat, currencies, detailMarginAccount) => {
  * param {number} quantity - cantidad
  * return {Promise}
  */
-const marginMarketBuy = (symbol, quantity) => {
+let iErrorLotSizeMMBuy = 0;
+const marginMarketBuy = (symbol, quantity, fiat, currencies, detailMarginAccount) => {
     return new Promise((resolve, reject) => {
-        binance.mgMarketBuy(symbol, quantity, (error, response) => {
+        binance.mgMarketBuy(symbol, quantity, async(error, response) => {
             if (error) {
                 const regex = /(\d+)/g;
                 const nroError = error.body.match(regex);
-                if (nroError[0] != 0) {
+                if (nroError[0] != 0 && nroError[0] != 1013) {
                     reject(`Error marginMarketBuy: ${symbol}, Qty: ${quantity}, ${error.body}`);
+                } else if (nroError[0] == 1013) { // {"code":-1013,"msg":"Filter failure: LOT_SIZE"}
+                    console.error(`Error 1013 Lot-Size. UPDATING..`);
+                    detailMarginAccount = await detailAccount(currencies, detailMarginAccount);
+                    detailMarginAccount = await positionCalculator(fiat, currencies, detailMarginAccount);
+                    detailMarginAccount = await currentSideOffClose(fiat, currencies, detailMarginAccount);
+
+                    console.log(`Error marginMarketBuy_LOT-SIZE-1013: Symbol: ${symbol}, Qty: ${quantity}, UPDATE-detailMarginAccount[symbol]["borrowed"]: ${detailMarginAccount[symbol]["borrowed"]}, ${error.body}`);
+                    await marginMarketBuy(symbol, detailMarginAccount[symbol]["borrowed"] - iErrorLotSizeMMBuy, fiat, currencies, detailMarginAccount);
+                    iErrorLotSizeMMBuy = iErrorLotSizeMMBuy + 1;
+
+                    // reject(`Error marginMarketBuy: symbol: ${symbol}, Qty: ${quantity}, ${error.body}`);
                 };
             } else {
                 console.log(`Margin Market, ${response.side}, ${response.symbol}: ${response.fills[0].qty} (usdt ${response.cummulativeQuoteQty}), status: ${response.status}`);
+                iErrorLotSizeMMBuy = 0;
                 resolve(response); // cantidad ejecutada => response.fills[0].qty (cantidad ejecutada)
             };
         });
@@ -375,22 +387,29 @@ const marginMarketBuy = (symbol, quantity) => {
  * param {number} quantity - cantidad
  * return {Promise}
  */
-const marginMarketSell = (symbol, quantity) => {
+let iErrorLotSizeMMSell = 0;
+const marginMarketSell = (symbol, quantity, fiat, currencies, detailMarginAccount) => {
     return new Promise((resolve, reject) => {
-        binance.mgMarketSell(symbol, quantity, (error, response) => {
+        binance.mgMarketSell(symbol, quantity, async(error, response) => {
             if (error) {
                 const regex = /(\d+)/g;
                 const nroError = error.body.match(regex);
-                if (nroError[0] != 0) {
+                if (nroError[0] != 0 && nroError[0] != 1013) {
                     reject(`Error marginMarketSell: symbol: ${symbol}, Qty: ${quantity}, ${error.body}`);
                 } else if (nroError[0] == 1013) { // {"code":-1013,"msg":"Filter failure: LOT_SIZE"}
-                    reject(`Error marginMarketSell: symbol: ${symbol}, Qty: ${quantity}, ${error.body}`);
-                    // qty = calcQuantity(close, lot);
-                    // quantity = formatQuantity(qty);
-                    // marginMarketSell(symbol, quantity);
+                    detailMarginAccount = await detailAccount(currencies, detailMarginAccount);
+                    detailMarginAccount = await positionCalculator(fiat, currencies, detailMarginAccount);
+                    detailMarginAccount = await currentSideOffClose(fiat, currencies, detailMarginAccount);
+
+                    console.log(`Error marginMarketSell_LOT-SIZE-1013: Symbol: ${symbol}, Qty: ${quantity}, UPDATE-detailMarginAccount[symbol]["free"]: ${detailMarginAccount[symbol]["free"]}, ${error.body}`);
+                    await marginMarketSell(symbol, detailMarginAccount[symbol]["free"] - iErrorLotSizeMMSell, fiat, currencies, detailMarginAccount);
+                    iErrorLotSizeMMSell = iErrorLotSizeMMSell + 1;
+
+                    // reject(`Error marginMarketSell: symbol: ${symbol}, Qty: ${quantity}, ${error.body}`);
                 };
             } else {
                 console.log(`Margin Market, ${response.side}, ${response.symbol}: ${response.fills[0].qty} (usdt ${response.cummulativeQuoteQty}), status: ${response.status}`);
+                iErrorLotSizeMMSell = 0;
                 resolve(response);
             };
         });
@@ -470,7 +489,7 @@ const closePosition = (symbol, fiat, detailMarginAccount, currencies) => {
             // arrastro posicion: largo || debo usdt
             if (detailMarginAccount[fiat]["borrowed"] > 10.00 && detailMarginAccount[symbol]["freeUsdt"] > 10.00) {
                 console.log(`***Cerrando posicion LONG ${symbol}, devolviendo ${fiat}..`);
-                let resMarginMarketSell = await marginMarketSell(symbol, detailMarginAccount[symbol]["free"]);
+                let resMarginMarketSell = await marginMarketSell(symbol, detailMarginAccount[symbol]["free"], fiat, currencies, detailMarginAccount);
                 minorQty = (detailMarginAccount[fiat]["borrowed"] <= resMarginMarketSell.cummulativeQuoteQty) ? detailMarginAccount[fiat]["borrowed"] : resMarginMarketSell.cummulativeQuoteQty;
                 await marginRepay(fiat, minorQty);
                 // resolve(`symbol: ${symbol}, modified`);
@@ -487,7 +506,7 @@ const closePosition = (symbol, fiat, detailMarginAccount, currencies) => {
                 // arrastro posicion: corto || debo crypto
             } else if (detailMarginAccount[symbol]["freeUsdt"] < 10.00 && detailMarginAccount[symbol]["borrowedUsdt"] > 10.00) {
                 console.log(`***Cerrando posicion SHORT ${symbol}, devolviendo ${currencies[symbol]}..`);
-                await marginMarketBuy(symbol, detailMarginAccount[symbol]["borrowed"]);
+                await marginMarketBuy(symbol, detailMarginAccount[symbol]["borrowed"], fiat, currencies, detailMarginAccount);
                 await detailAccount(currencies, detailMarginAccount);
                 await positionCalculator(fiat, currencies, detailMarginAccount);
                 await currentSideOffClose(fiat, currencies, detailMarginAccount);
@@ -499,20 +518,20 @@ const closePosition = (symbol, fiat, detailMarginAccount, currencies) => {
                 // tengo cripto comprado, pero sin apalancamiento
             } else if (detailMarginAccount[symbol]["freeUsdt"] > 10.00 && detailMarginAccount[fiat]["borrowed"] < 10.00) {
                 console.log(`...Quedo crypto rezagado,  ${symbol}`);
-                await marginMarketSell(currency, detailMarginAccount[symbol]["free"]);
+                await marginMarketSell(currency, detailMarginAccount[symbol]["free"], fiat, currencies, detailMarginAccount);
                 // resolve(`symbol: ${symbol}, modified`);
                 resolve(modified = true);
 
                 // tengo cripto comprado, pero sin apalancamiento
             } else if (detailMarginAccount[symbol]["freeUsdt"] > 10.00 && detailMarginAccount[fiat]["borrowed"] > 10.00) {
                 console.log(`***Cerrando posicion LONG ${symbol}, (pero sin apalancamiento), NO debo ${fiat}..`);
-                await marginMarketSell(symbol, detailMarginAccount[symbol]["free"]);
+                await marginMarketSell(symbol, detailMarginAccount[symbol]["free"], fiat, currencies, detailMarginAccount);
                 // resolve(`modified`);
                 resolve(modified = true);
 
 
             } else if (detailMarginAccount[symbol]["borrowedUsdt"] > 10.00 && detailMarginAccount[symbol]["freeUsdt"] < 10.00) {
-                await marginMarketBuy(symbol, detailMarginAccount[symbol]["borrowed"]);
+                await marginMarketBuy(symbol, detailMarginAccount[symbol]["borrowed"], fiat, currencies, detailMarginAccount);
                 await detailAccount(currencies, detailMarginAccount);
                 await positionCalculator(fiat, currencies, detailMarginAccount);
                 await currentSideOffClose(fiat, currencies, detailMarginAccount);
@@ -567,7 +586,7 @@ const currentSide = (fiat, currencies, detailMarginAccount) => {
                     // tengo fail / tengo crypto, pero sin prestamo de fiat ni de crypto
                 } else if (detailMarginAccount[fiat]["borrowed"] < 10.00 && detailMarginAccount[currency]["borrowedUsdt"] < 10.00 && detailMarginAccount[currency]["freeUsdt"] > 10.00) {
                     console.log(`*** Current position ${currency}: null. Holding crypto without a loan ${detailMarginAccount[currency]["free"]} (USDT: ${detailMarginAccount[currency]["freeUsdt"]})`);
-                    await marginMarketSell(currency, detailMarginAccount[currency]["free"]);
+                    await marginMarketSell(currency, detailMarginAccount[currency]["free"], fiat, currencies, detailMarginAccount);
                     detailMarginAccount[currency].currentSideMargin = null;
                     status = 'modified';
 
@@ -656,7 +675,7 @@ const order = (signal, symbol, close, lot, fiat, detailMarginAccount, currencies
             quantity = formatQuantity(qty);
             console.log(`symbol: ${symbol}, close: ${close}, calcQuantity: ${qty}, formatQuantity: ${quantity}`);
             await marginBorrow(fiat, lot);
-            await marginMarketBuy(symbol, quantity); // quantity = quantityCurrency[symbol]
+            await marginMarketBuy(symbol, quantity, fiat, currencies, detailMarginAccount); // quantity = quantityCurrency[symbol]
             console.log(`----------------------------INIT OPEN LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
             console.log(`-------------------------------------------------------------------------------------------------\n`);
             resolve(true);
@@ -667,7 +686,7 @@ const order = (signal, symbol, close, lot, fiat, detailMarginAccount, currencies
             quantity = formatQuantity(qty);
             console.log(`symbol: ${symbol}, close: ${close}, calcQuantity: ${qty}, formatQuantity: ${quantity}`);
             await marginBorrow(currencies[symbol], quantity); // quantity = quantityCurrency[symbol]
-            await marginMarketSell(symbol, quantity);
+            await marginMarketSell(symbol, quantity, fiat, currencies, detailMarginAccount, iErrorLotSizeMMSell);
             console.log(`----------------------------INIT OPEN SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
             console.log(`-------------------------------------------------------------------------------------------------\n`);
             resolve(true);
@@ -677,7 +696,7 @@ const order = (signal, symbol, close, lot, fiat, detailMarginAccount, currencies
             qty = calcQuantity(close, lot);
             quantity = formatQuantity(qty);
             console.log(`symbol: ${symbol}, close: ${close}, formatQuantity: ${quantity}`);
-            await marginMarketBuy(symbol, detailMarginAccount[symbol]["borrowed"]);
+            await marginMarketBuy(symbol, detailMarginAccount[symbol]["borrowed"], fiat, currencies, detailMarginAccount);
             await detailAccount(currencies, detailMarginAccount);
             await positionCalculator(fiat, currencies, detailMarginAccount);
             await currentSideOffClose(fiat, currencies, detailMarginAccount);
@@ -685,7 +704,7 @@ const order = (signal, symbol, close, lot, fiat, detailMarginAccount, currencies
             minorQty = (detailMarginAccount[symbol]["borrowed"] <= detailMarginAccount[symbol]["free"]) ? detailMarginAccount[symbol]["borrowed"] : detailMarginAccount[symbol]["free"];
             await marginRepay(currencies[symbol], minorQty); // parseFloat(resMarginMarketBuy.executedQty) / parseFloat(resMarginMarketBuy.fills[0].qty)
             await marginBorrow(fiat, lot);
-            await marginMarketBuy(symbol, quantity);
+            await marginMarketBuy(symbol, quantity, fiat, currencies, detailMarginAccount);
             console.log(`----------------------------OPEN LONG ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
             console.log(`-------------------------------------------------------------------------------------------------\n`);
             resolve(true);
@@ -696,7 +715,7 @@ const order = (signal, symbol, close, lot, fiat, detailMarginAccount, currencies
             qty = calcQuantity(close, lot);
             quantity = formatQuantity(qty);
             console.log(`symbol: ${symbol}, close: ${close}, formatQuantity: ${quantity}`);
-            await marginMarketSell(symbol, detailMarginAccount[symbol]["free"]);
+            await marginMarketSell(symbol, detailMarginAccount[symbol]["free"], fiat, currencies, detailMarginAccount);
             // await detailAccount(currencies, detailMarginAccount);
             // await positionCalculator(fiat, currencies, detailMarginAccount);
             // await currentSideOffClose(fiat, currencies, detailMarginAccount);
@@ -707,7 +726,7 @@ const order = (signal, symbol, close, lot, fiat, detailMarginAccount, currencies
             await positionCalculator(fiat, currencies, detailMarginAccount);
             await currentSideOffClose(fiat, currencies, detailMarginAccount);
             // await detailMarginAcc(fiat, currencies, detailMarginAccount);
-            await marginMarketSell(symbol, detailMarginAccount[symbol]["free"]); // antes quantity
+            await marginMarketSell(symbol, detailMarginAccount[symbol]["free"], fiat, currencies, detailMarginAccount); // antes quantity
             console.log(`----------------------------OPEN SHORT ${symbol}, Close: ${close}, Op: ${operation}----------------------------`);
             console.log(`-------------------------------------------------------------------------------------------------\n`);
             resolve(true);
@@ -822,10 +841,10 @@ const trading = (async _ => {
             timeFrame = "15m", // intervalo de las velas    
             fiat = "USDT", // default: USDT || moneda base
             lot = 40.00, // valor lote en fiat (USDT)
-            start = true, // default: true || start del bot
+            start = false, // default: true || start del bot
             realTime = true, // prefiere esperar que la vela se cierre, false. || prefiere que si la estrategia da senial y la vela aun no se cerro, el bot ejecute la orden, true
             closeAllPosition = false, // default false || vende las posiciones y repaga los prestamos existentes, dejando los pares en cero al arranque de la app
-            flagBackTesting = true, // default: false || inicia backtesting
+            flagBackTesting = false, // default: false || inicia backtesting
             invertSignal = false, // default: false || invierte la senal (ej: si es 'buy' se convierte a 'sell', idem si es 'sell') || falta implementarlo con el backtesting
             flagOnMagic = false, // default: false || a partir de todos los pares en margen, elige las monedas de forma automatizada y con mejores rendimiento basado en backtesting
             magicAmmount = 58, // cantidad de monedas que elegira la opcion flagOnMagic para operar
@@ -837,6 +856,7 @@ const trading = (async _ => {
         console.log("***Abechennon Margin Trader-Bot Binance*** \n");
         console.log(`TimeFrame: ${timeFrame} | Lot Usdt: ${lot} | Start: ${start} | Real-Time: ${realTime} | Magic: ${flagOnMagic} \n`);
         console.log(`Close all positions: ${closeAllPosition} | Back-Testing: ${flagBackTesting} | Invert signal: ${invertSignal} \n`);
+
 
         // await marginMarketSell('BTCUSDT', quantity);
         // await marginMarketBuy('BTCUSDT', 0.00061);
@@ -909,7 +929,7 @@ const trading = (async _ => {
                 // let dataBackTesting = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, true, 3, 15, 85); // obtiene seniales de la estrategia
                 // let dataBackTesting = await strategyAdxRsi(symbol, inputHistoryCandlestick[symbol], false, true, 3, 15, 85, 14, 25, 7, 13, 10, 100, 2); // (symbol, src, invertSignal = false, backTesting = false, lengthRsi, oversold, overbought, lengthAdx, signalAdx, lengthSmaCloseFast, lengthSmaCloseSlow, lengthSmaVolumeFast, lengthSmaVolumeSlow, thresholdVolumeMarkets)
                 // let dataBackTesting = await classicRsiWithCrossover(symbol, inputHistoryCandlestick[symbol], false, true, 3, 15, 85)
-                let dataBackTesting = strategySmaRsi(symbol, inputHistoryCandlestick[symbol], false, true, 3, 15, 85, true, 7, 13, 30, 2); // symbol, src, invertSignal = false, backTesting = false, lengthRsi, oversold, overbought, crossover = true, lengthSmaCloseFast, lengthSmaCloseSlow, lengthSmaVolume, thresholdVolumeMarkets
+                let dataBackTesting = strategySmaRsi(symbol, inputHistoryCandlestick[symbol], false, true, 3, 15, 85, true, 7, 13, 10, 2.8); // symbol, src, invertSignal = false, backTesting = false, lengthRsi, oversold, overbought, crossover = true, lengthSmaCloseFast, lengthSmaCloseSlow, lengthSmaVolume, thresholdVolumeMarkets
                 // console.log(dataBackTesting);
                 resultBackTesting = await backTesting(dataBackTesting); // se calculan rentabilidades
             };
@@ -919,6 +939,8 @@ const trading = (async _ => {
 
 
         console.log(`- Waiting for signal every: ${timeFrame}... \n`);
+
+        // console.log(detailMarginAccount['BTCUSDT']["free"]);
 
 
         let isFinally;
@@ -982,7 +1004,7 @@ const trading = (async _ => {
 
                     // let objectSignal = await classicRsi(symbol, inputHistoryCandlestick[symbol], invertSignal, false, 3, 15, 85); // obtiene seniales de la estrategia
                     // let objectSignal = await strategyAdxRsi(symbol, inputHistoryCandlestick[symbol], false, false, 3, 15, 85, true, 14, 25, 7, 13, 30, 100, 100); // (symbol, src, invertSignal = false, backTesting = false, lengthRsi, oversold, overbought, lengthAdx, signalAdx, lengthSmaCloseFast, lengthSmaCloseSlow, lengthSmaVolumeFast, lengthSmaVolumeSlow, thresholdVolumeMarkets)
-                    let objectSignal = strategySmaRsi(symbol, inputHistoryCandlestick[symbol], false, false, 3, 15, 85, true, 7, 13, 30, 2); // symbol, src, invertSignal = false, backTesting = false, lengthRsi, oversold, overbought, crossover = true, lengthSmaCloseFast, lengthSmaCloseSlow, lengthSmaVolume, thresholdVolumeMarkets
+                    let objectSignal = strategySmaRsi(symbol, inputHistoryCandlestick[symbol], false, false, 3, 15, 85, true, 7, 13, 10, 2.8); // symbol, src, invertSignal = false, backTesting = false, lengthRsi, oversold, overbought, crossover = true, lengthSmaCloseFast, lengthSmaCloseSlow, lengthSmaVolume, thresholdVolumeMarkets
                     let signal = objectSignal[symbol].signal;
 
                     if (start == true && signal !== undefined) {
